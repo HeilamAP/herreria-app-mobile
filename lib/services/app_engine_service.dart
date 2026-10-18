@@ -178,6 +178,15 @@ class AppEngineService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deletePagoSemanal(String empleadoId, String semana) {
+    storage.data.pagosSemanales.removeWhere((x) => x.empleadoId == empleadoId && x.semana == semana);
+    storage.saveData();
+    notifyListeners();
+  }
+
+  bool tienePagoSemanal(String empleadoId, String semana) =>
+      storage.data.pagosSemanales.any((x) => x.empleadoId == empleadoId && x.semana == semana);
+
   PagoSemanal getPagoSemanal(String empleadoId, String semana) {
     return storage.data.pagosSemanales.firstWhere(
       (x) => x.empleadoId == empleadoId && x.semana == semana,
@@ -373,4 +382,93 @@ class AppEngineService extends ChangeNotifier {
     list.sort((a, b) => b.fecha.compareTo(a.fecha));
     return list;
   }
+
+  // --- MODO ENCARGADO ---
+  List<VisitaAgenda> trabajosDelDia(String equipoId, String fecha) {
+    final list = getAgendaFiltered(equipoId)
+        .where((a) => a.fecha == fecha && a.estado.toLowerCase() != 'cancelado')
+        .toList();
+    list.sort((a, b) => a.minutosDelDia.compareTo(b.minutosDelDia));
+    return list;
+  }
+
+  int pendientesEn(String equipoId, String fecha) => getAgendaFiltered(equipoId)
+      .where((a) => a.fecha == fecha && a.estado.toLowerCase() == 'pendiente')
+      .length;
+
+  /// Guarda una cita nueva o reemplaza la que tenga el mismo id.
+  void saveVisitaAgenda(VisitaAgenda v) {
+    final index = storage.data.agenda.indexWhere((x) => x.id == v.id);
+    if (index >= 0) {
+      storage.data.agenda[index] = v;
+    } else {
+      storage.data.agenda.insert(0, v);
+    }
+    storage.saveData();
+    notifyListeners();
+  }
+
+  int indexOfVisita(String id) => storage.data.agenda.indexWhere((x) => x.id == id);
+
+  /// Para "deshacer" un borrado: regresa la cita a donde estaba.
+  void insertVisitaAt(VisitaAgenda v, int index) {
+    final i = index.clamp(0, storage.data.agenda.length);
+    storage.data.agenda.insert(i, v);
+    storage.saveData();
+    notifyListeners();
+  }
+
+  List<Gasto> gastosDelDia(String equipoId, String fecha) =>
+      getGastosFiltered(equipoId).where((g) => g.fecha == fecha).toList();
+
+  int indexOfGasto(String id) => storage.data.gastos.indexWhere((x) => x.id == id);
+
+  void insertGastoAt(Gasto g, int index) {
+    final i = index.clamp(0, storage.data.gastos.length);
+    storage.data.gastos.insert(i, g);
+    storage.saveData();
+    notifyListeners();
+  }
+
+  /// Totales de un equipo entre dos fechas (yyyy-MM-dd, ambas incluidas).
+  ResumenEquipo resumen(String equipoId, String desde, String hasta) {
+    bool enRango(String f) => f.compareTo(desde) >= 0 && f.compareTo(hasta) <= 0;
+    final r = ResumenEquipo();
+    for (final a in getAgendaFiltered(equipoId)) {
+      if (!a.completado || !enRango(a.fecha)) continue;
+      if (a.esVenta) {
+        r.ventas += a.monto;
+      } else {
+        r.trabajos += a.monto;
+      }
+      if (a.metodoPago.toLowerCase() == 'transferencia') {
+        r.transferencia += a.monto;
+      } else {
+        r.efectivo += a.monto;
+      }
+    }
+    // Ventas capturadas con la pantalla anterior de Ventas.
+    for (final v in getVentasFiltered(equipoId)) {
+      if (enRango(v.fecha)) r.ventas += v.montoVenta;
+    }
+    for (final g in getGastosFiltered(equipoId)) {
+      if (enRango(g.fecha)) r.gastos += g.monto;
+    }
+    return r;
+  }
+
+  double nominaEntre(String desde, String hasta) => storage.data.pagosSemanales
+      .where((p) => p.semana.compareTo(desde) >= 0 && p.semana.compareTo(hasta) <= 0)
+      .fold<double>(0, (sum, p) => sum + p.calcularNeto());
+}
+
+class ResumenEquipo {
+  double trabajos = 0;
+  double ventas = 0;
+  double gastos = 0;
+  double efectivo = 0;
+  double transferencia = 0;
+
+  double get cobrado => trabajos + ventas;
+  double get quedo => cobrado - gastos;
 }

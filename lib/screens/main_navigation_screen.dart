@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
-import 'home_dashboard_screen.dart';
-import 'ventas_screen.dart';
-import 'gastos_screen.dart';
-import 'agenda_screen.dart';
+import 'accesos_screen.dart';
+import 'admin_inicio_screen.dart';
 import 'empleados_screen.dart';
+import 'encargado/trabajos_screen.dart';
+import 'encargado/ui.dart';
 import 'respaldos_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -32,13 +32,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
 
+    // Ventas y gastos se ven en el Inicio (por equipo); ya no son pestañas aparte.
     final List<_NavDestination> destinations = [
-      _NavDestination('Inicio', Icons.home_outlined, Icons.home, const HomeDashboardScreen()),
-      _NavDestination('Ventas', Icons.point_of_sale_outlined, Icons.point_of_sale, const VentasScreen()),
-      _NavDestination('Gastos', Icons.money_off_outlined, Icons.money_off, const GastosScreen()),
-      _NavDestination('Agenda', Icons.calendar_month_outlined, Icons.calendar_month, const AgendaScreen()),
-      if (auth.isAdmin) _NavDestination('Personal', Icons.people_outline, Icons.people, const EmpleadosScreen()),
-      if (auth.isAdmin) _NavDestination('Respaldos', Icons.backup_outlined, Icons.backup, const RespaldosScreen()),
+      _NavDestination('Inicio', Icons.home_outlined, Icons.home, const AdminInicioScreen()),
+      _NavDestination(
+        'Agenda',
+        Icons.calendar_month_outlined,
+        Icons.calendar_month,
+        const EncargadoPage(child: ColoredBox(color: EC.fondo, child: TrabajosDiaScreen(admin: true))),
+      ),
+      _NavDestination('Personal', Icons.people_outline, Icons.people, const EmpleadosScreen()),
+      _NavDestination('Reportes', Icons.description_outlined, Icons.description, const RespaldosScreen()),
     ];
 
     // Ensure _currentIndex is within bounds
@@ -95,6 +99,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               onSelected: (val) {
                 if (val == 'logout') {
                   auth.logout();
+                } else if (val == 'accesos') {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccesosScreen()));
                 }
               },
               child: Chip(
@@ -111,8 +117,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   auth.currentUser?.nombre ?? '',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
-                backgroundColor: const Color(0xFF0F172A),
-                side: const BorderSide(color: Color(0xFF334155)),
               ),
               itemBuilder: (ctx) => [
                 PopupMenuItem(
@@ -120,6 +124,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   child: Text('Rol: ${auth.currentUser?.rol}'),
                 ),
                 const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'accesos',
+                  child: Row(
+                    children: [
+                      Icon(Icons.key_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('PIN y contraseña'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'logout',
                   child: Row(

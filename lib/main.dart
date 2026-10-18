@@ -7,6 +7,7 @@ import 'services/app_engine_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/encargado/encargado_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,7 @@ class PortonesApp extends StatefulWidget {
 }
 
 class _PortonesAppState extends State<PortonesApp> {
-  bool _isDarkMode = true;
+  bool _isDarkMode = false;
 
   void _toggleTheme() {
     setState(() {
@@ -56,7 +57,8 @@ class _PortonesAppState extends State<PortonesApp> {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            // El modo oscuro solo aplica al administrador; los encargados siempre ven el tema claro.
+            themeMode: _isDarkMode && auth.isAdmin ? ThemeMode.dark : ThemeMode.light,
             locale: const Locale('es', 'ES'),
             supportedLocales: const [
               Locale('es', 'ES'),
@@ -67,12 +69,14 @@ class _PortonesAppState extends State<PortonesApp> {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            home: auth.isLoggedIn
-                ? MainNavigationScreen(
-                    onToggleTheme: _toggleTheme,
-                    isDarkMode: _isDarkMode,
-                  )
-                : const LoginScreen(),
+            home: !auth.isLoggedIn
+                ? const LoginScreen()
+                : auth.isAdmin
+                    ? MainNavigationScreen(
+                        onToggleTheme: _toggleTheme,
+                        isDarkMode: _isDarkMode,
+                      )
+                    : const EncargadoShell(),
           );
         },
       ),

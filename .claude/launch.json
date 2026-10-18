@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server_movil.js"],
+      "port": 8085
+    }
+  ]
+}

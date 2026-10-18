@@ -75,6 +75,24 @@ class AppTheme {
     );
   }
 
+  /// Tema de las pantallas de los encargados: claro, alto contraste y letra grande.
+  static ThemeData get encargadoTheme {
+    final base = lightTheme;
+    return base.copyWith(
+      scaffoldBackgroundColor: Colors.white,
+      // englishLike2021 trae los tamaños definidos, que es lo que necesita fontSizeFactor.
+      textTheme: Typography.englishLike2021.merge(base.textTheme).apply(
+        fontSizeFactor: 1.15,
+        bodyColor: const Color(0xFF0F172A),
+        displayColor: const Color(0xFF0F172A),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        hintStyle: const TextStyle(fontSize: 20, color: Color(0xFF94A3B8)),
+      ),
+    );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/app_engine_service.dart';
 import '../services/storage_service.dart';
-import '../theme/app_theme.dart';
+import 'encargado/ui.dart';
 
+/// Reportes del administrador: resumen del mes por equipo y archivo para Excel.
 class RespaldosScreen extends StatefulWidget {
   const RespaldosScreen({super.key});
 
@@ -14,156 +15,101 @@ class RespaldosScreen extends StatefulWidget {
 }
 
 class _RespaldosScreenState extends State<RespaldosScreen> {
-  int _selectedYear = DateTime.now().year < 2026 ? 2026 : DateTime.now().year;
-  int _selectedMonth = (DateTime.now().year <= 2026 && DateTime.now().month < 10) ? 10 : DateTime.now().month;
+  DateTime _mes = DateTime(hoy().year, hoy().month);
 
-  final List<String> _meses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
+  void _moverMes(int delta) => setState(() => _mes = DateTime(_mes.year, _mes.month + delta));
 
   @override
   Widget build(BuildContext context) {
-    final storage = Provider.of<StorageService>(context);
+    final engine = context.watch<AppEngineService>();
+    final desde = fechaKey(_mes);
+    final hasta = fechaKey(DateTime(_mes.year, _mes.month + 1, 0));
+    final nombreMes = '${meses[_mes.month - 1][0].toUpperCase()}${meses[_mes.month - 1].substring(1)} ${_mes.year}';
+    final esMesActual = !_mes.isBefore(DateTime(hoy().year, hoy().month));
+    final nomina = engine.nominaEntre(desde, hasta);
+    double quedo = 0;
 
-    // Calculate available months based on selected year (starting from October 2026)
-    final startMonth = _selectedYear == 2026 ? 10 : 1;
-    if (_selectedYear == 2026 && _selectedMonth < 10) {
-      _selectedMonth = 10;
+    final tarjetas = <Widget>[];
+    for (final e in ['equipo1', 'equipo2']) {
+      final r = engine.resumen(e, desde, hasta);
+      quedo += r.quedo;
+      tarjetas.add(Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: EC.bordeFuerte)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              const Icon(Icons.groups_outlined, color: EC.textoSuave),
+              const SizedBox(width: 8),
+              Text(nombreEquipo(e), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+            ]),
+            const SizedBox(height: 10),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.3,
+              children: [
+                DatoMonto(etiqueta: 'Trabajos', valor: dinero(r.trabajos)),
+                DatoMonto(etiqueta: 'Ventas', valor: dinero(r.ventas)),
+                DatoMonto(etiqueta: 'Gastos', valor: dinero(r.gastos), color: EC.peligroTexto),
+                DatoMonto(etiqueta: 'Quedó', valor: dinero(r.quedo)),
+              ],
+            ),
+          ],
+        ),
+      ));
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return EncargadoPage(
+      child: ColoredBox(
+        color: EC.fondo,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            // Header Card
+            const Text('Reportes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+            const Text('Así cerró el mes', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+            const SizedBox(height: 14),
+            SelectorConFlechas(
+              texto: nombreMes,
+              onAnterior: () => _moverMes(-1),
+              onSiguiente: esMesActual ? null : () => _moverMes(1),
+            ),
+            const SizedBox(height: 14),
+            ...tarjetas,
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F766E), Color(0xFF0F172A)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.accentTeal.withValues(alpha: 0.3)),
-              ),
-              child: Row(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.backup_outlined, color: AppTheme.accentTeal, size: 36),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Respaldos y Reportes',
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Genera y exporta tu reporte mensual de datos en formato CSV (Excel)',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
+                  const SizedBox(height: 8),
+                  _linea('Quedó (cobrado − gastos)', dinero(quedo)),
+                  _linea('Pago a trabajadores', nomina > 0 ? '−${dinero(nomina)}' : dinero(0), color: EC.peligroTexto),
+                  const Divider(height: 20),
+                  _linea('Ganancia del mes', dinero(quedo - nomina), grande: true),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Reporte Mensual CSV (Excel)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.table_chart_outlined, color: AppTheme.primaryCyan),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Reporte Mensual en CSV (Excel)',
-                            style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Genera un archivo CSV compatible con Microsoft Excel con el desglose de ventas, gastos, trabajos, agenda y nómina del mes.',
-                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8)),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            initialValue: _selectedMonth < startMonth ? startMonth : _selectedMonth,
-                            decoration: const InputDecoration(labelText: 'Mes'),
-                            items: List.generate(13 - startMonth, (index) {
-                              final m = startMonth + index;
-                              return DropdownMenuItem(
-                                value: m,
-                                child: Text(_meses[m - 1]),
-                              );
-                            }),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedMonth = val);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            initialValue: _selectedYear,
-                            decoration: const InputDecoration(labelText: 'Año'),
-                            items: [2026, 2027, 2028, 2029, 2030].map((y) {
-                              return DropdownMenuItem(value: y, child: Text('$y'));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedYear = val;
-                                  if (_selectedYear == 2026 && _selectedMonth < 10) {
-                                    _selectedMonth = 10;
-                                  }
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _exportCsv(storage),
-                            icon: const Icon(Icons.file_download),
-                            label: const Text('Copiar / Compartir CSV'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 22),
+            const Text('Archivo para Excel', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+            const SizedBox(height: 4),
+            const Text(
+              'Trae el detalle del mes: ventas, gastos, trabajos, agenda y pagos al personal. '
+              'Lo puedes mandar por WhatsApp o correo y abrirlo en Excel.',
+              style: TextStyle(fontSize: 17, color: EC.textoSuave, height: 1.35),
+            ),
+            const SizedBox(height: 12),
+            BotonGrande(
+              texto: 'Compartir reporte de $nombreMes',
+              icono: Icons.ios_share,
+              estilo: EstiloBoton.primario,
+              onTap: () => _compartir(context.read<StorageService>(), nombreMes),
             ),
           ],
         ),
@@ -171,20 +117,27 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
     );
   }
 
-  void _exportCsv(StorageService storage) {
-    final csvData = storage.exportMonthlyCsv(_selectedYear, _selectedMonth);
-    Clipboard.setData(ClipboardData(text: csvData));
+  Widget _linea(String texto, String valor, {Color color = EC.texto, bool grande = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(children: [
+          Expanded(child: Text(texto, style: TextStyle(fontSize: grande ? 19 : 17, color: EC.textoSuave))),
+          Text(valor, style: TextStyle(fontSize: grande ? 26 : 19, fontWeight: FontWeight.w700, color: color)),
+        ]),
+      );
+
+  void _compartir(StorageService storage, String nombreMes) {
+    final csv = storage.exportMonthlyCsv(_mes.year, _mes.month);
+    Clipboard.setData(ClipboardData(text: csv));
     SharePlus.instance.share(
       ShareParams(
-        text: csvData,
-        subject: 'Resumen Mensual $_selectedYear-$_selectedMonth.csv',
+        text: csv,
+        subject: 'Reporte Ay Oy $nombreMes.csv',
       ),
     );
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('¡CSV copiado al portapapeles y listo para compartir!'),
-        backgroundColor: AppTheme.successGreen,
+        content: Text('Reporte copiado y listo para compartir', style: TextStyle(fontSize: 17)),
+        backgroundColor: EC.exito,
         behavior: SnackBarBehavior.floating,
       ),
     );

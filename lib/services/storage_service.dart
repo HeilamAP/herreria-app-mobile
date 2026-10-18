@@ -1,55 +1,58 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/backup_data.dart';
 import '../models/empleado.dart';
 import '../models/usuario.dart';
 import '../models/visita_agenda.dart';
+import 'seguridad.dart';
 
+/// Guarda todos los datos como un JSON en SharedPreferences.
+/// Funciona igual en Android, iOS y en la versión web (localStorage),
+/// así que lo capturado desde el iPhone ya no se pierde al recargar.
 class StorageService extends ChangeNotifier {
+  static const _clave = 'ayoy_datos_v2';
+
   BackupData _data = BackupData();
-  File? _file;
+  SharedPreferences? _prefs;
 
   BackupData get data => _data;
 
   Future<void> init() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      _file = File('${dir.path}/storage.json');
-
-      if (await _file!.exists()) {
-        final jsonString = await _file!.readAsString();
-        if (jsonString.isNotEmpty) {
-          final decoded = jsonDecode(jsonString);
-          _data = BackupData.fromJson(decoded);
-        } else {
+      _prefs = await SharedPreferences.getInstance();
+      final jsonString = _prefs!.getString(_clave);
+      if (jsonString != null && jsonString.isNotEmpty) {
+        try {
+          _data = BackupData.fromJson(jsonDecode(jsonString));
+        } catch (e) {
+          // No sobrescribir datos que no se pudieron leer: se apartan antes de empezar de nuevo.
+          await _prefs!.setString('${_clave}_ilegible_${DateTime.now().millisecondsSinceEpoch}', jsonString);
+          if (kDebugMode) print('Datos ilegibles, se apartaron: $e');
           _data = BackupData();
           _seedDefaultData();
         }
       } else {
         _data = BackupData();
         _seedDefaultData();
-        await saveData();
       }
       _seedDefaultUsers();
+      await saveData();
     } catch (e) {
       if (kDebugMode) {
         print('Error initialising storage: $e');
       }
       _data = BackupData();
       _seedDefaultData();
+      _seedDefaultUsers();
     }
     notifyListeners();
   }
 
   Future<void> saveData() async {
     try {
-      if (_file != null) {
-        final jsonString = const JsonEncoder.withIndent('  ').convert(_data.toJson());
-        await _file!.writeAsString(jsonString);
-      }
+      await _prefs?.setString(_clave, jsonEncode(_data.toJson()));
     } catch (e) {
       if (kDebugMode) {
         print('Error saving data: $e');
@@ -82,7 +85,7 @@ class StorageService extends ChangeNotifier {
   String exportMonthlyCsv(int year, int month) {
     final sb = StringBuffer();
     // UTF-8 BOM
-    sb.write('\uFEFF');
+    sb.write('﻿');
 
     final prefix = '$year-${month.toString().padLeft(2, '0')}';
     final monthName = DateFormat('MMMM yyyy', 'es_ES').format(DateTime(year, month, 1));
@@ -172,131 +175,124 @@ class StorageService extends ChangeNotifier {
       ));
     }
 
-    if (_data.agenda.isEmpty) {
+    // Citas de ejemplo solo al probar en modo desarrollo; la app real empieza vacía.
+    if (kDebugMode && _data.agenda.isEmpty) {
       final now = DateTime.now();
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
-      final tomorrowStr = DateFormat('yyyy-MM-dd').format(now.add(const Duration(days: 1)));
-      final nextWeekStr = DateFormat('yyyy-MM-dd').format(now.add(const Duration(days: 3)));
+      String dia(int n) => DateFormat('yyyy-MM-dd').format(now.add(Duration(days: n)));
 
       _data.agenda.addAll([
         VisitaAgenda(
           id: 'vis_1',
           cliente: 'Carlos Mendoza',
-          tipo: 'Instalación Motor Corredizo',
-          fecha: todayStr,
-          hora: '09:00 AM',
-          direccion: 'Calle 60 #450 x 53 y 55, Centro',
+          tipo: 'Instalación',
+          fecha: dia(0),
+          hora: '09:00',
+          direccion: 'Calle 60 #450 x 53 y 55, Centro, Mérida',
           telefono: '9991234567',
-          notas: 'Motor Merik 230V. Traer soldadora y extensiones.',
+          notas: 'Motor Merik 230V',
           estado: 'pendiente',
           equipoId: 'equipo1',
+          montoEstimado: 4500,
         ),
         VisitaAgenda(
           id: 'vis_2',
-          cliente: 'María Torres',
-          tipo: 'Mantenimiento Preventivo',
-          fecha: todayStr,
-          hora: '11:30 AM',
-          direccion: 'Fracc. Las Américas, Calle 53 #120',
-          telefono: '9999876543',
-          notas: 'Portón batiente de 2 hojas, lubricación y ajuste.',
+          cliente: 'Ana Pech',
+          tipo: 'Venta',
+          fecha: dia(0),
+          hora: '14:30',
+          direccion: 'Calle 33 #210, García Ginerés, Mérida',
+          telefono: '9997771122',
+          notas: '2 controles remotos',
           estado: 'pendiente',
-          equipoId: 'equipo2',
+          equipoId: 'equipo1',
+          montoEstimado: 900,
         ),
         VisitaAgenda(
           id: 'vis_3',
+          cliente: 'María Torres',
+          tipo: 'Mantenimiento',
+          fecha: dia(0),
+          hora: '11:30',
+          direccion: 'Fracc. Las Américas, Calle 53 #120, Mérida',
+          telefono: '9999876543',
+          notas: 'Portón batiente de 2 hojas',
+          estado: 'pendiente',
+          equipoId: 'equipo2',
+          montoEstimado: 800,
+        ),
+        VisitaAgenda(
+          id: 'vis_4',
           cliente: 'Roberto Gómez',
-          tipo: 'Cotización Portón Ascendente',
-          fecha: tomorrowStr,
-          hora: '02:00 PM',
-          direccion: 'Col. México Norte, Calle 18 #95',
+          tipo: 'Medir y cotizar',
+          fecha: dia(1),
+          hora: '10:00',
+          direccion: 'Col. México Norte, Calle 18 #95, Mérida',
           telefono: '9995554433',
-          notas: 'Medir claro de cochera y mostrar catálogo de paneles.',
+          notas: '',
           estado: 'pendiente',
           equipoId: 'equipo1',
         ),
         VisitaAgenda(
-          id: 'vis_4',
+          id: 'vis_5',
           cliente: 'Taller Industrial HEC',
-          tipo: 'Reparación de Pistones',
-          fecha: nextWeekStr,
-          hora: '04:30 PM',
-          direccion: 'Periférico Sur Km 12',
+          tipo: 'Reparación',
+          fecha: dia(17),
+          hora: '16:15',
+          direccion: 'Periférico Sur Km 12, Mérida',
           telefono: '9994443322',
-          notas: 'Falla en tarjeta electrónica LiftMaster.',
+          notas: 'Falla en tarjeta LiftMaster',
           estado: 'pendiente',
           equipoId: 'equipo2',
+          montoEstimado: 2200,
         ),
       ]);
     }
-
-    _seedDefaultUsers();
   }
 
   void _seedDefaultUsers() {
-    bool changed = false;
-
     // Admin Account: Hei-lam Ay
-    if (!_data.usuarios.any((u) => u.username.toLowerCase() == 'heilamay' || u.username.toLowerCase() == 'admin')) {
+    if (!_data.usuarios.any((u) => u.isAdmin)) {
       _data.usuarios.add(Usuario(
         id: 'usr_admin',
         nombre: 'Hei-lam Ay',
         username: 'heilamay',
-        password: 'admin123',
+        password: Seguridad.cifrar('admin123'),
         rol: 'Administrador',
         equipoId: 'todos',
       ));
-      changed = true;
     }
 
-    // Equipo 1: Jose Ay
-    if (!_data.usuarios.any((u) => u.username.toLowerCase() == 'joseay' || u.username.toLowerCase() == 'equipo1')) {
+    // Encargados: entran con su nombre y un PIN que ellos mismos crean la primera vez.
+    if (!_data.usuarios.any((u) => u.username.toLowerCase() == 'joseay')) {
       _data.usuarios.add(Usuario(
         id: 'usr_equipo1',
-        nombre: 'Jose Ay (Equipo 1)',
+        nombre: 'Jose Ay',
         username: 'joseay',
-        password: '1234',
+        password: '',
         rol: 'Empleado',
         equipoId: 'equipo1',
       ));
-      changed = true;
     }
-
-    // Equipo 2: Nefy Dzul
-    if (!_data.usuarios.any((u) => u.username.toLowerCase() == 'nefydzul' || u.username.toLowerCase() == 'equipo2')) {
+    if (!_data.usuarios.any((u) => u.username.toLowerCase() == 'nefydzul')) {
       _data.usuarios.add(Usuario(
         id: 'usr_equipo2',
-        nombre: 'Nefy Dzul (Equipo 2)',
+        nombre: 'Nefy Dzul',
         username: 'nefydzul',
-        password: '1234',
+        password: '',
         rol: 'Empleado',
         equipoId: 'equipo2',
       ));
-      changed = true;
     }
 
-    // Update legacy default admin or user team IDs if missing
-    for (var u in _data.usuarios) {
-      if (u.rol.toLowerCase() == 'administrador') {
-        if (u.nombre == 'Administrador' || u.nombre.isEmpty) {
-          u.nombre = 'Hei-lam Ay';
-          changed = true;
-        }
-        if (u.equipoId.isEmpty) {
-          u.equipoId = 'todos';
-          changed = true;
-        }
-      } else if (u.username.toLowerCase() == 'joseay') {
-        u.equipoId = 'equipo1';
-        changed = true;
-      } else if (u.username.toLowerCase() == 'nefydzul') {
-        u.equipoId = 'equipo2';
-        changed = true;
+    // Cualquier contraseña o PIN que siga en texto plano se cifra al cargar.
+    for (final u in _data.usuarios) {
+      if (u.password.isNotEmpty && !Seguridad.esHash(u.password)) {
+        u.password = Seguridad.cifrar(u.password);
       }
-    }
-
-    if (changed) {
-      saveData();
+      if (u.pin.isNotEmpty && !Seguridad.esHash(u.pin)) {
+        u.pin = Seguridad.cifrar(u.pin);
+      }
+      if (u.isAdmin && u.equipoId.isEmpty) u.equipoId = 'todos';
     }
   }
 }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/empleado.dart';
 import '../models/pago_semanal.dart';
 import '../services/app_engine_service.dart';
-import '../theme/app_theme.dart';
+import 'encargado/ui.dart';
 
+/// Personal y nómina del administrador, con el mismo estilo que Inicio y Agenda.
+/// Los pagos se guardan por semana (lunes a domingo).
 class EmpleadosScreen extends StatefulWidget {
   const EmpleadosScreen({super.key});
 
@@ -15,379 +15,416 @@ class EmpleadosScreen extends StatefulWidget {
 }
 
 class _EmpleadosScreenState extends State<EmpleadosScreen> {
-  final String _selectedSemana = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+  DateTime _lunes = lunesDe(hoy());
+
+  void _moverSemana(int semanas) => setState(() => _lunes = _lunes.add(Duration(days: 7 * semanas)));
 
   @override
   Widget build(BuildContext context) {
-    final engine = Provider.of<AppEngineService>(context);
-    final allEmpleados = engine.data.empleados;
+    final engine = context.watch<AppEngineService>();
+    final empleados = engine.data.empleados;
+    final semana = fechaKey(_lunes);
+    final esEstaSemana = _lunes == lunesDe(hoy());
+    final total = empleados.fold<double>(0, (s, e) => s + engine.getPagoSemanal(e.id, semana).calcularNeto());
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return EncargadoPage(
+      child: ColoredBox(
+        color: EC.fondo,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            // Header Banner
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4C1D95), Color(0xFF0F172A)],
+            const Text('Personal', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+            const Text('Pagos de la semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+            const SizedBox(height: 14),
+            SelectorConFlechas(
+              texto: semanaTexto(_lunes),
+              onAnterior: () => _moverSemana(-1),
+              onSiguiente: () => _moverSemana(1),
+            ),
+            if (!esEstaSemana)
+              Center(
+                child: TextButton(
+                  onPressed: () => setState(() => _lunes = lunesDe(hoy())),
+                  child: const Text('Volver a esta semana', style: TextStyle(fontSize: 17)),
                 ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.infoPurple.withValues(alpha: 0.3)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Personal y Nómina',
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.infoPurple.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.infoPurple),
-                          ),
-                          child: Text(
-                            'Gasto Total Pagado: ${currencyFormat.format(engine.getTotalNominaGastada())}',
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddEmpleadoDialog(context),
-                    icon: const Icon(Icons.person_add, size: 16),
-                    label: const Text('Nuevo empleado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.infoPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 2,
-                    ),
-                  ),
+                  const Text('Total a pagar esta semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+                  Text(dinero(total), style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: EC.texto)),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            Text(
-              'Lista de Empleados y Pagos (${allEmpleados.length})',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+            const SizedBox(height: 14),
+            BotonGrande(
+              texto: 'Agregar empleado',
+              icono: Icons.person_add_alt_1_outlined,
+              estilo: EstiloBoton.primario,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NuevoEmpleadoScreen())),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            if (empleados.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
+                child: const Text('Todavía no hay empleados', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
+              ),
+            for (final e in empleados) ...[
+              _TarjetaEmpleado(
+                empleado: e,
+                pago: engine.getPagoSemanal(e.id, semana),
+                pagado: engine.tienePagoSemanal(e.id, semana),
+                onPago: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => PagoSemanalScreen(empleado: e, lunes: _lunes),
+                )),
+                onQuitar: () => _quitar(e),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-            if (allEmpleados.isEmpty)
-              Card(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.badge_outlined, size: 48, color: Color(0xFF64748B)),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No hay empleados registrados en el sistema.',
-                        style: GoogleFonts.inter(fontSize: 16, color: const Color(0xFF94A3B8)),
-                      ),
-                    ],
+  void _quitar(Empleado e) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (ctx) => PantallaBorrar(
+        pregunta: '¿Quitar a ${e.nombre}?',
+        detalle: 'Sale de la lista de personal. Sus pagos anteriores se conservan en los reportes.',
+        onBorrar: () {
+          final engine = ctx.read<AppEngineService>();
+          final index = engine.data.empleados.indexWhere((x) => x.id == e.id);
+          engine.deleteEmpleado(e.id);
+          Navigator.of(ctx).pushReplacement(MaterialPageRoute(
+            builder: (_) => PantallaListo(
+              titulo: 'Quitado',
+              mensaje: e.nombre,
+              onDeshacer: () {
+                engine.data.empleados.insert(index.clamp(0, engine.data.empleados.length), e);
+                engine.storage.saveData();
+              },
+            ),
+          ));
+        },
+      ),
+    ));
+  }
+}
+
+class _TarjetaEmpleado extends StatelessWidget {
+  final Empleado empleado;
+  final PagoSemanal pago;
+  final bool pagado;
+  final VoidCallback onPago;
+  final VoidCallback onQuitar;
+
+  const _TarjetaEmpleado({
+    required this.empleado,
+    required this.pago,
+    required this.pagado,
+    required this.onPago,
+    required this.onQuitar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final e = empleado;
+    final puesto = e.puesto.isEmpty ? 'Técnico' : e.puesto;
+    final equipo = nombreEquipo(e.equipoId);
+    final detalle = puesto.contains(equipo) ? puesto : '$puesto · $equipo';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: EC.bordeFuerte)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: EC.acentoFondo,
+              child: Text(e.nombre.isNotEmpty ? e.nombre[0].toUpperCase() : '?',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.acentoTexto)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(e.nombre, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text(detalle, style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+                ],
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1.45,
+            children: [
+              DatoMonto(etiqueta: 'Base', valor: dinero(pago.pagoBase)),
+              DatoMonto(etiqueta: 'Extras', valor: dinero(pago.extraTrabajos + pago.ayudaEspecial)),
+              DatoMonto(
+                etiqueta: 'Préstamo',
+                valor: pago.descuentoPrestamo > 0 ? '−${dinero(pago.descuentoPrestamo)}' : dinero(0),
+                color: pago.descuentoPrestamo > 0 ? EC.peligroTexto : EC.texto,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: Text(pagado ? 'Neto a pagar' : 'Sin pago registrado',
+                  style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+            ),
+            Text(dinero(pago.calcularNeto()), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.texto)),
+          ]),
+          const SizedBox(height: 12),
+          BotonGrande(
+            texto: pagado ? 'Cambiar pago' : 'Registrar pago',
+            icono: Icons.payments_outlined,
+            estilo: pagado ? EstiloBoton.normal : EstiloBoton.primario,
+            alto: 56,
+            onTap: onPago,
+          ),
+          const SizedBox(height: 8),
+          BotonGrande(
+            texto: 'Quitar de la lista',
+            icono: Icons.person_remove_outlined,
+            estilo: EstiloBoton.peligroSuave,
+            fontSize: 17,
+            alto: 50,
+            onTap: onQuitar,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class NuevoEmpleadoScreen extends StatefulWidget {
+  const NuevoEmpleadoScreen({super.key});
+
+  @override
+  State<NuevoEmpleadoScreen> createState() => _NuevoEmpleadoScreenState();
+}
+
+class _NuevoEmpleadoScreenState extends State<NuevoEmpleadoScreen> {
+  final _nombre = TextEditingController();
+  final _puesto = TextEditingController();
+  String _equipo = 'equipo1';
+  String? _error;
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    _puesto.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    if (_nombre.text.trim().isEmpty) {
+      setState(() => _error = 'Escribe el nombre');
+      return;
+    }
+    final engine = context.read<AppEngineService>();
+    final e = Empleado(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      nombre: _nombre.text.trim(),
+      puesto: _puesto.text.trim(),
+      equipoId: _equipo,
+    );
+    engine.addEmpleado(e);
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => PantallaListo(
+        titulo: 'Agregado',
+        mensaje: '${e.nombre}\n${nombreEquipo(e.equipoId)}',
+        onDeshacer: () => engine.deleteEmpleado(e.id),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return EncargadoPage(
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.all(18),
+                children: [
+                  Encabezado(titulo: 'Nuevo empleado', onAtras: () => Navigator.of(context).pop()),
+                  const SizedBox(height: 16),
+                  CampoGrande(
+                    etiqueta: 'Nombre',
+                    controller: _nombre,
+                    ejemplo: 'Pedro Canul',
+                    mayusculas: TextCapitalization.words,
+                    onChanged: (_) {
+                      if (_error != null) setState(() => _error = null);
+                    },
                   ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: allEmpleados.length,
-                itemBuilder: (context, index) {
-                  final emp = allEmpleados[index];
-                  final pago = engine.getPagoSemanal(emp.id, _selectedSemana);
-                  final neto = pago.calcularNeto();
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: AppTheme.infoPurple.withValues(alpha: 0.2),
-                                      child: const Icon(Icons.person, color: AppTheme.infoPurple),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            emp.nombre,
-                                            style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            emp.puesto.isEmpty ? 'Técnico' : emp.puesto,
-                                            style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20, color: AppTheme.dangerRed),
-                                onPressed: () => _confirmDeleteEmpleado(context, emp.id),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 24, color: Color(0xFF334155)),
-
-                          // Payroll Breakdown Row
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 8,
-                            children: [
-                              _buildNominaMiniItem('Pago Base', currencyFormat.format(pago.pagoBase)),
-                              _buildNominaMiniItem('Extras', currencyFormat.format(pago.extraTrabajos)),
-                              _buildNominaMiniItem('Préstamo', '-${currencyFormat.format(pago.descuentoPrestamo)}', color: AppTheme.dangerRed),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 12,
-                            runSpacing: 8,
-                            children: [
-                              Text(
-                                'Neto a Pagar: ${currencyFormat.format(neto)}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.successGreen,
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () => _showEditPagoDialog(context, emp, pago),
-                                icon: const Icon(Icons.payments, size: 16),
-                                label: const Text('Gestionar Pago'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.infoPurple,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  TextoError(_error),
+                  const SizedBox(height: 18),
+                  CampoGrande(etiqueta: 'Puesto', opcional: '(opcional)', controller: _puesto, ejemplo: 'Instalador'),
+                  const SizedBox(height: 18),
+                  const Text('¿En qué equipo trabaja?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: BotonGrande(texto: 'Equipo 1', alto: 56, seleccionado: _equipo == 'equipo1', onTap: () => setState(() => _equipo = 'equipo1'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: BotonGrande(texto: 'Equipo 2', alto: 56, seleccionado: _equipo == 'equipo2', onTap: () => setState(() => _equipo = 'equipo2'))),
+                  ]),
+                  const SizedBox(height: 28),
+                  BotonGrande(texto: 'Guardar', icono: Icons.check, estilo: EstiloBoton.exito, onTap: _guardar),
+                ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildNominaMiniItem(String label, String value, {Color? color}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color ?? Colors.white)),
-      ],
-    );
+class PagoSemanalScreen extends StatefulWidget {
+  final Empleado empleado;
+  final DateTime lunes;
+
+  const PagoSemanalScreen({super.key, required this.empleado, required this.lunes});
+
+  @override
+  State<PagoSemanalScreen> createState() => _PagoSemanalScreenState();
+}
+
+class _PagoSemanalScreenState extends State<PagoSemanalScreen> {
+  late final PagoSemanal _anterior;
+  late final bool _existia;
+  late final TextEditingController _base;
+  late final TextEditingController _extras;
+  late final TextEditingController _motivoExtras;
+  late final TextEditingController _ayuda;
+  late final TextEditingController _prestamo;
+
+  String get _semana => fechaKey(widget.lunes);
+
+  String _texto(double v) => v == 0 ? '' : (v == v.roundToDouble() ? v.round().toString() : v.toString());
+  double _valor(TextEditingController c) => double.tryParse(c.text.replaceAll(',', '').trim()) ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final engine = context.read<AppEngineService>();
+    _existia = engine.tienePagoSemanal(widget.empleado.id, _semana);
+    _anterior = engine.getPagoSemanal(widget.empleado.id, _semana);
+    _base = TextEditingController(text: _texto(_anterior.pagoBase));
+    _extras = TextEditingController(text: _texto(_anterior.extraTrabajos));
+    _motivoExtras = TextEditingController(text: _anterior.motivoExtra);
+    _ayuda = TextEditingController(text: _texto(_anterior.ayudaEspecial));
+    _prestamo = TextEditingController(text: _texto(_anterior.descuentoPrestamo));
   }
 
-  void _showAddEmpleadoDialog(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final puestoCtrl = TextEditingController();
+  @override
+  void dispose() {
+    for (final c in [_base, _extras, _motivoExtras, _ayuda, _prestamo]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Nuevo Empleado', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre Completo *'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: puestoCtrl,
-              decoration: const InputDecoration(labelText: 'Puesto / Rol (ej. Instalador)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.infoPurple),
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              final emp = Empleado(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nombre: nameCtrl.text.trim(),
-                puesto: puestoCtrl.text.trim(),
-                equipoId: 'equipo1',
-              );
-              Provider.of<AppEngineService>(context, listen: false).addEmpleado(emp);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+  double get _neto => _valor(_base) + _valor(_extras) + _valor(_ayuda) - _valor(_prestamo);
+
+  void _guardar() {
+    final engine = context.read<AppEngineService>();
+    final copiaAnterior = PagoSemanal.fromJson(_anterior.toJson());
+    final p = PagoSemanal(
+      id: _anterior.id.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : _anterior.id,
+      empleadoId: widget.empleado.id,
+      semana: _semana,
+      pagoBase: _valor(_base),
+      extraTrabajos: _valor(_extras),
+      motivoExtra: _motivoExtras.text.trim(),
+      ayudaEspecial: _valor(_ayuda),
+      motivoAyuda: _anterior.motivoAyuda,
+      descuentoPrestamo: _valor(_prestamo),
+      motivoPrestamo: _anterior.motivoPrestamo,
+    );
+    engine.savePagoSemanal(p);
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => PantallaListo(
+        titulo: _existia ? 'Pago cambiado' : 'Pago registrado',
+        mensaje: '${widget.empleado.nombre}\n${dinero(p.calcularNeto())} · ${semanaTexto(widget.lunes).toLowerCase()}',
+        onDeshacer: () => _existia
+            ? engine.savePagoSemanal(copiaAnterior)
+            : engine.deletePagoSemanal(widget.empleado.id, _semana),
       ),
-    );
+    ));
   }
 
-  void _showEditPagoDialog(BuildContext context, Empleado emp, PagoSemanal currentPago) {
-    final engine = Provider.of<AppEngineService>(context, listen: false);
+  Widget _campoDinero(String etiqueta, TextEditingController c, {String? opcional}) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: CampoGrande(
+          etiqueta: etiqueta,
+          opcional: opcional,
+          controller: c,
+          ejemplo: '0',
+          teclado: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => setState(() {}),
+        ),
+      );
 
-    final baseCtrl = TextEditingController(text: currentPago.pagoBase.toString());
-    final extraCtrl = TextEditingController(text: currentPago.extraTrabajos.toString());
-    final prestamoCtrl = TextEditingController(text: currentPago.descuentoPrestamo.toString());
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            double base = double.tryParse(baseCtrl.text) ?? 0.0;
-            double extra = double.tryParse(extraCtrl.text) ?? 0.0;
-            double prestamo = double.tryParse(prestamoCtrl.text) ?? 0.0;
-            double neto = base + extra - prestamo;
-
-            return AlertDialog(
-              title: Text('Pago Semanal - ${emp.nombre}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Semana: $_selectedSemana', style: const TextStyle(color: AppTheme.infoPurple, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: baseCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Pago Base (\$)'),
-                      onChanged: (_) => setDialogState(() {}),
+  @override
+  Widget build(BuildContext context) {
+    return EncargadoPage(
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.all(18),
+                children: [
+                  Encabezado(
+                    titulo: 'Pago de ${widget.empleado.nombre}',
+                    paso: semanaTexto(widget.lunes),
+                    onAtras: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(height: 16),
+                  _campoDinero('Pago base', _base),
+                  _campoDinero('Extras por trabajos', _extras, opcional: '(si hubo)'),
+                  if (_valor(_extras) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: CampoGrande(etiqueta: '¿Por qué los extras?', opcional: '(opcional)', controller: _motivoExtras, ejemplo: 'Instalación en domingo'),
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: extraCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Extra Trabajos (\$)'),
-                      onChanged: (_) => setDialogState(() {}),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: prestamoCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Descuento Préstamo (\$)'),
-                      onChanged: (_) => setDialogState(() {}),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Total Neto Calculado:'),
-                          Text(
-                            currencyFormat.format(neto),
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.successGreen, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  _campoDinero('Ayuda especial', _ayuda, opcional: '(si hubo)'),
+                  _campoDinero('Préstamo a descontar', _prestamo, opcional: '(si hubo)'),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
+                    child: Row(children: [
+                      const Expanded(child: Text('Neto a pagar', style: TextStyle(fontSize: 20, color: EC.textoSuave))),
+                      Text(dinero(_neto), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: EC.texto)),
+                    ]),
+                  ),
+                  const SizedBox(height: 24),
+                  BotonGrande(texto: 'Guardar pago', icono: Icons.check, estilo: EstiloBoton.exito, onTap: _guardar),
+                ],
               ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.infoPurple),
-                  onPressed: () {
-                    final p = PagoSemanal(
-                      id: currentPago.id.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : currentPago.id,
-                      empleadoId: emp.id,
-                      semana: _selectedSemana,
-                      pagoBase: double.tryParse(baseCtrl.text) ?? 0.0,
-                      extraTrabajos: double.tryParse(extraCtrl.text) ?? 0.0,
-                      motivoExtra: '',
-                      ayudaEspecial: 0.0,
-                      motivoAyuda: '',
-                      descuentoPrestamo: double.tryParse(prestamoCtrl.text) ?? 0.0,
-                      motivoPrestamo: '',
-                    );
-                    engine.savePagoSemanal(p);
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Guardar Pago', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _confirmDeleteEmpleado(BuildContext context, String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Eliminar Empleado?'),
-        content: const Text('Esta acción eliminará al empleado de la lista.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerRed),
-            onPressed: () {
-              Provider.of<AppEngineService>(context, listen: false).deleteEmpleado(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

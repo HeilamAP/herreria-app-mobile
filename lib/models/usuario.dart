@@ -2,7 +2,8 @@ class Usuario {
   final String id;
   String nombre;
   String username;
-  String password;
+  String password; // cifrada (ver Seguridad)
+  String pin; // cifrado; vacío = el encargado aún no crea su PIN
   String rol; // "Administrador" or "Empleado"
   String equipoId; // "equipo1", "equipo2", "todos"
 
@@ -14,6 +15,7 @@ class Usuario {
     required this.username,
     required this.password,
     required this.rol,
+    this.pin = '',
     this.equipoId = 'equipo1',
   });
 
@@ -23,6 +25,7 @@ class Usuario {
       nombre: json['nombre'] ?? json['Nombre'] ?? '',
       username: json['username'] ?? json['Username'] ?? '',
       password: json['password'] ?? json['Password'] ?? '',
+      pin: json['pin'] ?? json['Pin'] ?? '',
       rol: json['rol'] ?? json['Rol'] ?? 'Empleado',
       equipoId: json['equipoId'] ?? json['EquipoId'] ?? 'equipo1',
     );
@@ -33,6 +36,7 @@ class Usuario {
     'nombre': nombre,
     'username': username,
     'password': password,
+    'pin': pin,
     'rol': rol,
     'equipoId': equipoId,
   };
