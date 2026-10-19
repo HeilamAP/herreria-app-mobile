@@ -8,8 +8,8 @@ import 'agendar_screen.dart';
 import 'cobrar_screen.dart';
 import 'ui.dart';
 
-/// Lista de trabajos por día. Para el encargado muestra solo su equipo;
-/// para el administrador agrega un filtro por equipo.
+/// Lista de trabajos por día. La agenda es una sola: los encargados ven los
+/// trabajos de los dos equipos; el administrador además puede filtrar por equipo.
 class TrabajosDiaScreen extends StatefulWidget {
   final bool admin;
   const TrabajosDiaScreen({super.key, this.admin = false});
@@ -41,10 +41,12 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
     });
   }
 
-  String get _equipoConsulta =>
-      widget.admin ? _filtroEquipo : (context.read<AuthService>().currentUser?.equipoId ?? 'equipo1');
+  String get _equipoConsulta => widget.admin ? _filtroEquipo : 'todos';
 
-  /// Equipo con el que se crean trabajos nuevos.
+  /// Equipo del encargado que tiene la sesión (null para el administrador).
+  String? get _equipoPropio => widget.admin ? null : context.read<AuthService>().currentUser?.equipoId;
+
+  /// Equipo que se propone al crear trabajos nuevos (se puede cambiar al agendar).
   String get _equipoNuevo => widget.admin
       ? (_filtroEquipo == 'todos' ? 'equipo1' : _filtroEquipo)
       : (context.read<AuthService>().currentUser?.equipoId ?? 'equipo1');
@@ -60,7 +62,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => AgendarScreen(
         equipoId: _equipoNuevo,
-        elegirEquipo: widget.admin,
+        elegirEquipo: true,
         diaInicial: _dia.isBefore(hoy()) ? null : _dia,
         onDiaGuardado: _irADia,
       ),
@@ -205,12 +207,13 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
         for (final t in lista) ...[
           _TarjetaTrabajo(
             trabajo: t,
-            mostrarEquipo: widget.admin && _filtroEquipo == 'todos',
+            mostrarEquipo: !widget.admin || _filtroEquipo == 'todos',
+            equipoPropio: _equipoPropio,
             onCobrar: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => CobrarScreen(equipoId: t.equipoId, trabajo: t),
             )),
             onOpciones: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => OpcionesTrabajoScreen(trabajo: t, elegirEquipo: widget.admin, onDiaGuardado: _irADia),
+              builder: (_) => OpcionesTrabajoScreen(trabajo: t, elegirEquipo: true, onDiaGuardado: _irADia),
             )),
           ),
           const SizedBox(height: 12),
@@ -223,10 +226,39 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
 class _TarjetaTrabajo extends StatelessWidget {
   final VisitaAgenda trabajo;
   final bool mostrarEquipo;
+  final String? equipoPropio;
   final VoidCallback onCobrar;
   final VoidCallback onOpciones;
 
-  const _TarjetaTrabajo({required this.trabajo, required this.mostrarEquipo, required this.onCobrar, required this.onOpciones});
+  const _TarjetaTrabajo({
+    required this.trabajo,
+    required this.mostrarEquipo,
+    required this.equipoPropio,
+    required this.onCobrar,
+    required this.onOpciones,
+  });
+
+  /// Etiqueta con el equipo que hace el trabajo; resalta el equipo del encargado.
+  Widget _etiquetaEquipo() {
+    final propio = trabajo.equipoId == equipoPropio;
+    return Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: propio ? EC.acentoFondo : EC.superficie,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: propio ? EC.acento : EC.borde),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.groups_outlined, size: 18, color: propio ? EC.acentoTexto : EC.textoSuave),
+          const SizedBox(width: 6),
+          Text(
+            propio ? '${nombreEquipo(trabajo.equipoId)} (tu equipo)' : nombreEquipo(trabajo.equipoId),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: propio ? EC.acentoTexto : EC.textoSuave),
+          ),
+        ]),
+    );
+  }
 
   Future<void> _abrir(BuildContext context, Uri uri, String faltante) async {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -294,18 +326,26 @@ class _TarjetaTrabajo extends StatelessWidget {
               const SizedBox(width: 6),
               Text(parteDelDia(minutos ~/ 60).replaceFirst('de la ', ''),
                   style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
-              const Spacer(),
-              Icon(iconoDeTipo(t.tipo), size: 20, color: t.esVenta ? EC.acento : EC.textoSuave),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(t.tipo,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 17, color: t.esVenta ? EC.acentoTexto : EC.textoSuave, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (mostrarEquipo) _etiquetaEquipo(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(iconoDeTipo(t.tipo), size: 20, color: t.esVenta ? EC.acento : EC.textoSuave),
+                  const SizedBox(width: 4),
+                  Text(t.tipo,
+                      style: TextStyle(fontSize: 17, color: t.esVenta ? EC.acentoTexto : EC.textoSuave, fontWeight: FontWeight.w600)),
+                ]),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text('${t.cliente}$equipoTxt', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
+          Text(t.cliente, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
           if (t.notas.isNotEmpty) Text(t.notas, style: const TextStyle(fontSize: 18, color: EC.texto)),
           const SizedBox(height: 4),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

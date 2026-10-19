@@ -487,8 +487,15 @@ class _AgendarScreenState extends State<AgendarScreen> {
             Expanded(
               child: BotonGrande(
                 texto: nombreEquipo(e),
+                subtitulo: context
+                    .read<AppEngineService>()
+                    .data
+                    .usuarios
+                    .where((u) => !u.isAdmin && u.equipoId == e)
+                    .map((u) => u.nombre)
+                    .firstOrNull,
                 seleccionado: _equipo == e,
-                alto: 56,
+                alto: 64,
                 onTap: () => setState(() => _equipo = e),
               ),
             ),
