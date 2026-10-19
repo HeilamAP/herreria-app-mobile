@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:portones_movil/screens/encargado/horario_dia.dart';
+import 'package:portones_movil/screens/encargado/ui.dart';
 import 'package:portones_movil/main.dart';
 import 'package:portones_movil/models/visita_agenda.dart';
 import 'package:portones_movil/services/app_engine_service.dart';
@@ -41,6 +44,52 @@ void main() {
     expect(todos.map((t) => t.id), ['de_jose', 'de_nefy']);
     expect(engine.pendientesEn('todos', '2030-01-07'), 2);
     expect(engine.trabajosDelDia('equipo2', '2030-01-07').map((t) => t.id), ['de_nefy']);
+  });
+
+  test('La duración se guarda y los trabajos viejos duran 1 hora', () {
+    final viejo = VisitaAgenda.fromJson({'id': 'a', 'hora': '10:00'});
+    expect(viejo.duracionMin, 60);
+    expect(viejo.finMinutos, 11 * 60);
+    final nuevo = VisitaAgenda.fromJson({...viejo.toJson(), 'duracionMin': 150});
+    expect(VisitaAgenda.fromJson(nuevo.toJson()).duracionMin, 150);
+    expect(duracionTexto(30), '30 min');
+    expect(duracionTexto(90), '1 hora y media');
+    expect(duracionTexto(150), '2 horas y media');
+    expect(duracionTexto(600), 'Todo el día');
+  });
+
+  testWidgets('El horario muestra trabajos encimados y fuera de horario', (tester) async {
+    VisitaAgenda cita(String id, String equipo, String hora, int dur) => VisitaAgenda(
+          id: id, cliente: 'Cliente $id', fecha: '2030-01-07', hora: hora, tipo: 'Instalación',
+          direccion: '', telefono: '', notas: '', estado: 'pendiente', equipoId: equipo, duracionMin: dur,
+        );
+    VisitaAgenda? tocado;
+    String? huecoEquipo;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: HorarioDia(
+            trabajos: [
+              cita('a', 'equipo1', '09:00', 120),
+              cita('b', 'equipo1', '10:00', 60), // se encima con "a"
+              cita('c', 'equipo2', '07:00', 60), // antes de las 8
+            ],
+            equipos: const ['equipo1', 'equipo2'],
+            equipoPropio: 'equipo1',
+            esHoy: false,
+            onTrabajo: (t) => tocado = t,
+            onHueco: (e, m) => huecoEquipo = e,
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('Antes de las 8 am'), findsOneWidget);
+    expect(find.text('Cliente a'), findsOneWidget);
+    expect(find.text('Cliente b'), findsOneWidget);
+    await tester.tap(find.text('Cliente b'));
+    expect(tocado?.id, 'b');
+    await tester.tapAt(tester.getTopRight(find.byType(HorarioDia)) + const Offset(-20, 300));
+    expect(huecoEquipo, 'equipo2');
   });
 
   test('La hora se lee en formato nuevo y viejo', () {

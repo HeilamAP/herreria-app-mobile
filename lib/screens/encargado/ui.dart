@@ -78,6 +78,17 @@ String horaTexto(int minutos) {
   return '${(h % 12) == 0 ? 12 : h % 12}:${(minutos % 60).toString().padLeft(2, '0')}';
 }
 
+/// Opciones de "¿Cuánto tarda?", en minutos.
+const duraciones = [30, 60, 90, 120, 150, 180, 240, 300, 600];
+
+String duracionTexto(int min) {
+  if (min >= 600) return 'Todo el día';
+  if (min < 60) return '$min min';
+  final h = min ~/ 60, m = min % 60;
+  final horas = h == 1 ? '1 hora' : '$h horas';
+  return m == 0 ? horas : '$horas y media';
+}
+
 String parteDelDia(int hora24) => hora24 < 12 ? 'de la mañana' : hora24 < 19 ? 'de la tarde' : 'de la noche';
 
 String dinero(num n) {

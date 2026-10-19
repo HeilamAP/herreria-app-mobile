@@ -14,6 +14,7 @@ class VisitaAgenda {
   double monto; // Lo que se cobró
   double montoEstimado; // Lo que se piensa cobrar (al agendar)
   String metodoPago; // 'efectivo' | 'transferencia'
+  int duracionMin; // Cuánto tarda el trabajo, en minutos (para la vista de horario)
 
   VisitaAgenda({
     required this.id,
@@ -29,7 +30,10 @@ class VisitaAgenda {
     this.monto = 0.0,
     this.montoEstimado = 0.0,
     this.metodoPago = 'efectivo',
+    this.duracionMin = 60,
   });
+
+  int get finMinutos => minutosDelDia + duracionMin;
 
   bool get completado {
     final st = estado.toLowerCase();
@@ -72,6 +76,7 @@ class VisitaAgenda {
       monto: (json['monto'] ?? json['Monto'] ?? 0.0).toDouble(),
       montoEstimado: (json['montoEstimado'] ?? json['MontoEstimado'] ?? 0.0).toDouble(),
       metodoPago: json['metodoPago'] ?? json['MetodoPago'] ?? 'efectivo',
+      duracionMin: (json['duracionMin'] as num?)?.toInt() ?? 60,
     );
   }
 
@@ -89,5 +94,6 @@ class VisitaAgenda {
         'monto': monto,
         'montoEstimado': montoEstimado,
         'metodoPago': metodoPago,
+        'duracionMin': duracionMin,
       };
 }

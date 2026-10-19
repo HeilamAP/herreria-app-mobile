@@ -79,6 +79,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
         equipoId: widget.equipoId,
         monto: monto,
         metodoPago: metodo,
+        duracionMin: 30,
       );
       engine.saveVisitaAgenda(v);
       _terminar('Venta guardada', 'Venta de ${dinero(monto)} a ${v.cliente}\nen $formaTxt', () => engine.deleteVisitaAgenda(v.id));
