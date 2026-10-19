@@ -9,7 +9,7 @@ import 'cobrar_screen.dart';
 import 'horario_dia.dart';
 import 'ui.dart';
 
-/// Lista de trabajos por día. La agenda es una sola: los encargados ven los
+/// Horario de trabajos por día. La agenda es una sola: los encargados ven los
 /// trabajos de los dos equipos; el administrador además puede filtrar por equipo.
 class TrabajosDiaScreen extends StatefulWidget {
   final bool admin;
@@ -23,12 +23,8 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
   static const _anchoDia = 92.0;
   static const _separacionDia = 8.0;
 
-  /// Última vista usada (Lista u Horario); se conserva mientras la app esté abierta.
-  static String _vistaRecordada = 'lista';
-
   DateTime _dia = hoy();
   String _filtroEquipo = 'todos';
-  String _vista = _vistaRecordada;
   final _tiraDias = ScrollController();
 
   @override
@@ -202,30 +198,15 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        _selectorVista(),
-        const SizedBox(height: 14),
-        if (_vista == 'horario')
-          HorarioDia(
-            trabajos: lista,
-            equipos: equipo == 'todos' ? const ['equipo1', 'equipo2'] : [equipo],
-            equipoPropio: _equipoPropio,
-            esHoy: _dia == h,
-            onTrabajo: _mostrarTrabajo,
-            onHueco: _mostrarHueco,
-          )
-        else ...[
-          if (lista.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
-              child: const Text('No hay trabajos este día', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
-            ),
-          for (final t in lista) ...[
-            _tarjeta(t),
-            const SizedBox(height: 12),
-          ],
-        ],
+        const SizedBox(height: 18),
+        HorarioDia(
+          trabajos: lista,
+          equipos: equipo == 'todos' ? const ['equipo1', 'equipo2'] : [equipo],
+          equipoPropio: _equipoPropio,
+          esHoy: _dia == h,
+          onTrabajo: _mostrarTrabajo,
+          onHueco: _mostrarHueco,
+        ),
       ],
     );
   }
@@ -245,44 +226,6 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
           ));
         },
       );
-
-  Widget _selectorVista() {
-    Widget opcion(String valor, String texto, IconData icono) {
-      final activa = _vista == valor;
-      return Expanded(
-        child: Material(
-          color: activa ? EC.fondo : Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: activa ? EC.bordeFuerte : Colors.transparent),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() => _vista = _vistaRecordada = valor),
-            child: SizedBox(
-              height: 52,
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(icono, size: 22, color: activa ? EC.texto : EC.textoSuave),
-                const SizedBox(width: 8),
-                Text(texto,
-                    style: TextStyle(fontSize: 18, fontWeight: activa ? FontWeight.w700 : FontWeight.w400, color: activa ? EC.texto : EC.textoSuave)),
-              ]),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
-      child: Row(children: [
-        opcion('lista', 'Lista', Icons.view_agenda_outlined),
-        const SizedBox(width: 4),
-        opcion('horario', 'Horario', Icons.schedule),
-      ]),
-    );
-  }
 
   /// Al tocar un trabajo en el horario: su tarjeta completa en una hoja desde abajo.
   void _mostrarTrabajo(VisitaAgenda t) {
