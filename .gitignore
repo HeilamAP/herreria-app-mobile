@@ -49,3 +49,6 @@ app.*.map.json
 
 # Copias locales de respaldo (el historial de git ya guarda el código anterior)
 _respaldo_lib_*/
+
+# APK generados para instalar en los celulares (se vuelven a generar con flutter build apk)
+/APK/
