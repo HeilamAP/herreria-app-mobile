@@ -510,7 +510,8 @@ void main() {
       await tester.tap(find.byTooltip('Aspecto de la app'));
       await tester.pumpAndSettle();
       expect(find.text('Aspecto de la app'), findsOneWidget);
-      expect(find.text('Como el celular'), findsOneWidget);
+      expect(find.text('Claro'), findsOneWidget);
+      expect(find.text('Como el celular'), findsNothing); // solo claro u oscuro
       await tester.tap(find.text('Oscuro'));
       await tester.pumpAndSettle();
 
@@ -520,14 +521,14 @@ void main() {
       expect(colorDe(tester, 'Hola, Jose'), Paleta.oscura.texto);
     });
 
-    testWidgets('"Como el celular" sigue el ajuste del teléfono', (tester) async {
+    testWidgets('El ajuste del teléfono no cambia el modo; un valor viejo "sistema" queda en claro', (tester) async {
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
       SharedPreferences.setMockInitialValues({'ayoy_datos_v2_aspecto': 'sistema'});
       final storage = StorageService();
       await tester.runAsync(storage.init);
       await tester.pumpWidget(PortonesApp(storageService: storage));
-      expect(EC.oscuro, isTrue);
+      expect(EC.oscuro, isFalse);
     });
   });
 

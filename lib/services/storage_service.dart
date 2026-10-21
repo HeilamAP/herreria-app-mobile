@@ -61,7 +61,7 @@ class StorageService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Aspecto elegido en este celular: 'claro' (predeterminado), 'oscuro' o 'sistema'.
+  /// Aspecto elegido en este celular: 'claro' (predeterminado) u 'oscuro'.
   /// Se guarda aparte de los datos del negocio porque es de cada teléfono.
   String get aspecto => _prefs?.getString('${_clave}_aspecto') ?? 'claro';
 

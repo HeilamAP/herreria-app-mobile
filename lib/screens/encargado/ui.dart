@@ -584,7 +584,7 @@ class BotonAspecto extends StatelessWidget {
   }
 }
 
-/// Hoja "Aspecto de la app": Claro, Oscuro o Como el celular.
+/// Hoja "Aspecto de la app": Claro u Oscuro.
 void mostrarAspecto(BuildContext context) {
   final servicio = context.read<AspectoService>();
   showModalBottomSheet(
@@ -638,7 +638,6 @@ void mostrarAspecto(BuildContext context) {
               const SizedBox(height: 16),
               opcion('claro', Icons.light_mode_outlined, 'Claro', 'Fondo blanco'),
               opcion('oscuro', Icons.dark_mode_outlined, 'Oscuro', 'Fondo oscuro, cansa menos la vista de noche'),
-              opcion('sistema', Icons.smartphone_outlined, 'Como el celular', 'Cambia solo según el ajuste del celular'),
             ]),
           ),
         ),
