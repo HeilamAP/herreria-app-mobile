@@ -96,7 +96,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
                     onDia: (d) => Navigator.of(ctx).pop(d),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Toca un día para ver sus trabajos.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+                  Text('Toca un día para ver sus trabajos.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
                 ],
               ),
             ),
@@ -154,6 +154,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
                   fontSize: 16,
                   alto: 72,
                   padding: 4,
+                  ajustarTexto: true,
                   seleccionado: d == _dia,
                   onTap: () => _irADia(d),
                 ),
@@ -170,7 +171,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
           onTap: _verCalendario,
         ),
         const SizedBox(height: 14),
-        Text(diaTexto(_dia), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
+        Text(diaTexto(_dia), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -268,9 +269,9 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text(
                 pasado ? 'Ese día ya pasó' : '${horaTexto(minuto)} ${parteDelDia(minuto ~/ 60)}',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto),
               ),
-              Text('${nombreEquipo(equipo)} · ${diaTexto(_dia)}', style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+              Text('${nombreEquipo(equipo)} · ${diaTexto(_dia)}', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
               const SizedBox(height: 18),
               if (!pasado) ...[
                 BotonGrande(
@@ -367,18 +368,18 @@ class _TarjetaTrabajo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(children: [
-              const Icon(Icons.check_circle, color: EC.exitoTexto, size: 26),
+              Icon(Icons.check_circle, color: EC.exitoTexto, size: 26),
               const SizedBox(width: 8),
               Expanded(
                 child: Text('${horaTexto(minutos)} · ${t.cliente}',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.exitoTexto)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.exitoTexto)),
               ),
             ]),
             const SizedBox(height: 4),
             Text(
               '${t.tipo}${t.notas.isNotEmpty ? ' · ${t.notas}' : ''}$equipoTxt\n'
               'Cobrado ${dinero(t.monto)} · ${t.metodoPago.toLowerCase() == 'transferencia' ? 'Transferencia' : 'Efectivo'}',
-              style: const TextStyle(fontSize: 18, color: EC.exitoTexto, height: 1.35),
+              style: TextStyle(fontSize: 18, color: EC.exitoTexto, height: 1.35),
             ),
             const SizedBox(height: 10),
             if (t.notaFinal.isNotEmpty || t.fotos.isNotEmpty)
@@ -414,10 +415,10 @@ class _TarjetaTrabajo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(horaTexto(minutos), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: EC.texto)),
+              Text(horaTexto(minutos), style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: EC.texto)),
               const SizedBox(width: 6),
               Text(parteDelDia(minutos ~/ 60).replaceFirst('de la ', ''),
-                  style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+                  style: TextStyle(fontSize: 16, color: EC.textoSuave)),
             ],
           ),
           const SizedBox(height: 6),
@@ -437,26 +438,26 @@ class _TarjetaTrabajo extends StatelessWidget {
               ),
             ],
           ),
-          Text(t.cliente, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
-          if (t.notas.isNotEmpty) Text(t.notas, style: const TextStyle(fontSize: 18, color: EC.texto)),
+          Text(t.cliente, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
+          if (t.notas.isNotEmpty) Text(t.notas, style: TextStyle(fontSize: 18, color: EC.texto)),
           Text(
             t.duracionMin >= 600
                 ? 'Todo el día'
                 : 'Tarda ${duracionTexto(t.duracionMin)} · hasta las ${horaTexto(t.finMinutos)}',
-            style: const TextStyle(fontSize: 17, color: EC.textoSuave),
+            style: TextStyle(fontSize: 17, color: EC.textoSuave),
           ),
           const SizedBox(height: 4),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.place_outlined, size: 20, color: EC.textoSuave),
+            Icon(Icons.place_outlined, size: 20, color: EC.textoSuave),
             const SizedBox(width: 4),
             Expanded(
               child: Text(t.direccion.isEmpty ? 'Sin dirección' : t.direccion,
-                  style: const TextStyle(fontSize: 17, color: EC.textoSuave)),
+                  style: TextStyle(fontSize: 17, color: EC.textoSuave)),
             ),
           ]),
           if (t.montoEstimado > 0) ...[
             const SizedBox(height: 4),
-            Text('Cobrar aprox. ${dinero(t.montoEstimado)}', style: const TextStyle(fontSize: 19, color: EC.texto, fontWeight: FontWeight.w600)),
+            Text('Cobrar aprox. ${dinero(t.montoEstimado)}', style: TextStyle(fontSize: 19, color: EC.texto, fontWeight: FontWeight.w600)),
           ],
           const SizedBox(height: 12),
           Row(
@@ -559,11 +560,11 @@ class OpcionesTrabajoScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(t.cliente, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
+                    Text(t.cliente, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.texto)),
                     Text(
                       '${t.tipo} · ${diaTexto(fechaDeKey(t.fecha))} · ${horaTexto(t.minutosDelDia)}'
                       '${t.completado ? '\nCobrado ${dinero(t.monto)}' : ''}',
-                      style: const TextStyle(fontSize: 18, color: EC.textoSuave, height: 1.35),
+                      style: TextStyle(fontSize: 18, color: EC.textoSuave, height: 1.35),
                     ),
                   ],
                 ),

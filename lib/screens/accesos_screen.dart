@@ -77,8 +77,8 @@ class _AccesosScreenState extends State<AccesosScreen> {
                 children: [
                   Encabezado(titulo: 'Accesos', onAtras: () => Navigator.of(context).pop()),
                   const SizedBox(height: 12),
-                  const Text('PIN de los encargados', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
-                  const Text('Si alguien olvida su PIN, bórralo. La próxima vez que entre, creará uno nuevo.',
+                  Text('PIN de los encargados', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text('Si alguien olvida su PIN, bórralo. La próxima vez que entre, creará uno nuevo.',
                       style: TextStyle(fontSize: 16, color: EC.textoSuave)),
                   const SizedBox(height: 10),
                   for (final u in auth.encargados)
@@ -101,7 +101,7 @@ class _AccesosScreenState extends State<AccesosScreen> {
                       ),
                     ),
                   const SizedBox(height: 24),
-                  const Text('Mi contraseña', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text('Mi contraseña', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
                   const SizedBox(height: 10),
                   _campo('Contraseña actual', _actual),
                   _campo('Contraseña nueva', _nueva),

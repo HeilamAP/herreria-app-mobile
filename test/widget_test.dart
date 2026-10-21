@@ -460,6 +460,77 @@ void main() {
     expect(engine.data.gastos.single.monto, 305);
   });
 
+  group('Modo oscuro', () {
+    tearDown(() => EC.usarOscuro(false));
+
+    Color colorDe(WidgetTester tester, String texto) => tester.widget<Text>(find.text(texto)).style!.color!;
+
+    testWidgets('La app abre en claro la primera vez', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      await tester.runAsync(storage.init);
+      await tester.pumpWidget(PortonesApp(storageService: storage));
+      expect(storage.aspecto, 'claro');
+      expect(EC.oscuro, isFalse);
+      expect(colorDe(tester, '¿Quién eres?'), Paleta.clara.texto);
+    });
+
+    testWidgets('Si se eligió oscuro, se recuerda al abrir', (tester) async {
+      SharedPreferences.setMockInitialValues({'ayoy_datos_v2_aspecto': 'oscuro'});
+      final storage = StorageService();
+      await tester.runAsync(storage.init);
+      await tester.pumpWidget(PortonesApp(storageService: storage));
+      expect(EC.oscuro, isTrue);
+      expect(colorDe(tester, '¿Quién eres?'), Paleta.oscura.texto);
+      final fondo = tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
+          Theme.of(tester.element(find.byType(Scaffold).first)).scaffoldBackgroundColor;
+      expect(fondo, Paleta.oscura.fondo);
+    });
+
+    testWidgets('La luna abre "Aspecto de la app" y cambia a oscuro', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      await tester.runAsync(storage.init);
+      tester.view.physicalSize = const Size(420, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(PortonesApp(storageService: storage));
+      // Entrar como Jose (crea su PIN).
+      await tester.tap(find.text('Jose Ay'));
+      await tester.pumpAndSettle();
+      for (var vez = 0; vez < 2; vez++) {
+        for (final n in ['1', '2', '3', '4']) {
+          await tester.tap(find.text(n));
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Hola, Jose'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Aspecto de la app'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aspecto de la app'), findsOneWidget);
+      expect(find.text('Como el celular'), findsOneWidget);
+      await tester.tap(find.text('Oscuro'));
+      await tester.pumpAndSettle();
+
+      expect(EC.oscuro, isTrue);
+      expect(storage.aspecto, 'oscuro');
+      expect(find.text('Hola, Jose'), findsOneWidget); // sigue con la sesión abierta
+      expect(colorDe(tester, 'Hola, Jose'), Paleta.oscura.texto);
+    });
+
+    testWidgets('"Como el celular" sigue el ajuste del teléfono', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      SharedPreferences.setMockInitialValues({'ayoy_datos_v2_aspecto': 'sistema'});
+      final storage = StorageService();
+      await tester.runAsync(storage.init);
+      await tester.pumpWidget(PortonesApp(storageService: storage));
+      expect(EC.oscuro, isTrue);
+    });
+  });
+
   test('La hora se lee en formato nuevo y viejo', () {
     expect(VisitaAgenda.minutosDeHora('14:30'), 14 * 60 + 30);
     expect(VisitaAgenda.minutosDeHora('02:30 PM'), 14 * 60 + 30);

@@ -149,10 +149,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: 56,
                 height: 56,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Icon(Icons.door_sliding_outlined, size: 48, color: EC.acento)),
+                errorBuilder: (_, _, _) => Icon(Icons.door_sliding_outlined, size: 48, color: EC.acento)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -164,8 +164,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
       const SizedBox(height: 28),
-      const Text('¿Quién eres?', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: EC.texto)),
-      const Text('Toca tu nombre', style: TextStyle(fontSize: 19, color: EC.textoSuave)),
+      Text('¿Quién eres?', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: EC.texto)),
+      Text('Toca tu nombre', style: TextStyle(fontSize: 19, color: EC.textoSuave)),
       const SizedBox(height: 18),
       for (final u in encargados) ...[
         _tarjetaPersona(u),
@@ -175,8 +175,8 @@ class _LoginScreenState extends State<LoginScreen> {
       Center(
         child: TextButton.icon(
           onPressed: () => _irA(_Modo.admin),
-          icon: const Icon(Icons.admin_panel_settings_outlined, color: EC.textoSuave),
-          label: const Text('Soy el administrador', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+          icon: Icon(Icons.admin_panel_settings_outlined, color: EC.textoSuave),
+          label: Text('Soy el administrador', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
         ),
       ),
     ];
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _tarjetaPersona(Usuario u) {
     return Material(
       color: EC.superficie,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EC.borde)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: EC.borde)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
@@ -200,19 +200,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 radius: 32,
                 backgroundColor: EC.acentoFondo,
                 child: Text(u.nombre.isNotEmpty ? u.nombre[0].toUpperCase() : '?',
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: EC.acentoTexto)),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: EC.acentoTexto)),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(u.nombre, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
-                    Text(nombreEquipo(u.equipoId), style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+                    Text(u.nombre, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
+                    Text(nombreEquipo(u.equipoId), style: TextStyle(fontSize: 18, color: EC.textoSuave)),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 34, color: EC.textoSuave),
+              Icon(Icons.chevron_right, size: 34, color: EC.textoSuave),
             ],
           ),
         ),
@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : 'Para estar seguros de que lo recuerdas';
     return [
       Encabezado(titulo: titulo, onAtras: () => _irA(_Modo.quien)),
-      Text(ayuda, style: const TextStyle(fontSize: 19, color: EC.textoSuave)),
+      Text(ayuda, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
       const SizedBox(height: 26),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -276,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       if (!_creando) ...[
         const SizedBox(height: 18),
-        const Text('¿Olvidaste tu PIN? Pídele al administrador que lo borre y crea uno nuevo.',
+        Text('¿Olvidaste tu PIN? Pídele al administrador que lo borre y crea uno nuevo.',
             textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: EC.textoSuave)),
       ],
     ];
@@ -288,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
       const SizedBox(height: 16),
       CampoGrande(etiqueta: 'Usuario', controller: _userCtrl, mayusculas: TextCapitalization.none, onChanged: (_) => setState(() => _error = null)),
       const SizedBox(height: 18),
-      const Text('Contraseña', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+      Text('Contraseña', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
       const SizedBox(height: 8),
       TextField(
         controller: _passCtrl,

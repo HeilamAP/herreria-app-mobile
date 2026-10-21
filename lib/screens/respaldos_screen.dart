@@ -41,9 +41,9 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(children: [
-              const Icon(Icons.groups_outlined, color: EC.textoSuave),
+              Icon(Icons.groups_outlined, color: EC.textoSuave),
               const SizedBox(width: 8),
-              Text(nombreEquipo(e), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+              Text(nombreEquipo(e), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
             ]),
             const SizedBox(height: 10),
             GridView.count(
@@ -71,8 +71,8 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            const Text('Reportes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-            const Text('Así cerró el mes', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+            Text('Reportes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+            Text('Así cerró el mes', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
             const SizedBox(height: 14),
             SelectorConFlechas(
               texto: nombreMes,
@@ -87,7 +87,7 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
                   const SizedBox(height: 8),
                   _linea('Quedó (cobrado − gastos)', dinero(quedo)),
                   _linea('Pago a trabajadores', nomina > 0 ? '−${dinero(nomina)}' : dinero(0), color: EC.peligroTexto),
@@ -97,9 +97,9 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
               ),
             ),
             const SizedBox(height: 22),
-            const Text('Archivo para Excel', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+            Text('Archivo para Excel', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Trae el detalle del mes: ventas, gastos, trabajos, agenda y pagos al personal. '
               'Lo puedes mandar por WhatsApp o correo y abrirlo en Excel.',
               style: TextStyle(fontSize: 17, color: EC.textoSuave, height: 1.35),
@@ -117,11 +117,11 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
     );
   }
 
-  Widget _linea(String texto, String valor, {Color color = EC.texto, bool grande = false}) => Padding(
+  Widget _linea(String texto, String valor, {Color? color, bool grande = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(children: [
           Expanded(child: Text(texto, style: TextStyle(fontSize: grande ? 19 : 17, color: EC.textoSuave))),
-          Text(valor, style: TextStyle(fontSize: grande ? 26 : 19, fontWeight: FontWeight.w700, color: color)),
+          Text(valor, style: TextStyle(fontSize: grande ? 26 : 19, fontWeight: FontWeight.w700, color: color ?? EC.texto)),
         ]),
       );
 
@@ -135,7 +135,7 @@ class _RespaldosScreenState extends State<RespaldosScreen> {
       ),
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text('Reporte copiado y listo para compartir', style: TextStyle(fontSize: 17)),
         backgroundColor: EC.exito,
         behavior: SnackBarBehavior.floating,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'services/aspecto_service.dart';
 import 'services/storage_service.dart';
 import 'services/auth_service.dart';
 import 'services/app_engine_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/paleta.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/encargado/encargado_shell.dart';
@@ -28,12 +30,12 @@ class PortonesApp extends StatefulWidget {
 }
 
 class _PortonesAppState extends State<PortonesApp> {
-  bool _isDarkMode = false;
+  late final AspectoService _aspecto = AspectoService(storage: widget.storageService);
 
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
+  @override
+  void dispose() {
+    _aspecto.dispose();
+    super.dispose();
   }
 
   @override
@@ -41,6 +43,7 @@ class _PortonesAppState extends State<PortonesApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<StorageService>.value(value: widget.storageService),
+        ChangeNotifierProvider<AspectoService>.value(value: _aspecto),
         ChangeNotifierProxyProvider<StorageService, AuthService>(
           create: (ctx) => AuthService(storage: widget.storageService),
           update: (ctx, storage, previous) => previous ?? AuthService(storage: storage),
@@ -50,15 +53,16 @@ class _PortonesAppState extends State<PortonesApp> {
           update: (ctx, storage, previous) => previous ?? AppEngineService(storage: storage),
         ),
       ],
-      child: Consumer<AuthService>(
-        builder: (context, auth, child) {
+      child: Consumer2<AuthService, AspectoService>(
+        builder: (context, auth, aspecto, child) {
+          // Los colores de todas las pantallas salen de la paleta activa. Al cambiar de
+          // modo se vuelve a construir la app completa (por eso la clave) para aplicarlos.
+          EC.usarOscuro(aspecto.oscuro);
           return MaterialApp(
+            key: ValueKey(aspecto.oscuro),
             title: 'Ay Oy Herrería Artística en General',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            // El modo oscuro solo aplica al administrador; los encargados siempre ven el tema claro.
-            themeMode: _isDarkMode && auth.isAdmin ? ThemeMode.dark : ThemeMode.light,
+            theme: AppTheme.encargadoTheme,
             locale: const Locale('es', 'ES'),
             supportedLocales: const [
               Locale('es', 'ES'),
@@ -72,10 +76,7 @@ class _PortonesAppState extends State<PortonesApp> {
             home: !auth.isLoggedIn
                 ? const LoginScreen()
                 : auth.isAdmin
-                    ? MainNavigationScreen(
-                        onToggleTheme: _toggleTheme,
-                        isDarkMode: _isDarkMode,
-                      )
+                    ? const MainNavigationScreen()
                     : const EncargadoShell(),
           );
         },

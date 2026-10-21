@@ -315,7 +315,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
       const SizedBox(height: 16),
       CampoGrande(etiqueta: 'Dirección', controller: _direccion, ejemplo: 'Calle 21 #300 x 20 y 22'),
       const SizedBox(height: 6),
-      const Text('Con la dirección, el botón "Cómo llegar" abre el mapa.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+      Text('Con la dirección, el botón "Cómo llegar" abre el mapa.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
       const SizedBox(height: 18),
       CampoGrande(
         etiqueta: esVenta ? '¿Qué vas a vender?' : 'Notas',
@@ -329,7 +329,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
 
   List<Widget> _pasoEstimado() => [
         Encabezado(titulo: '¿Cuánto vas a cobrar?', paso: _textoPaso(_Paso.estimado), onAtras: _atras),
-        const Text('Aproximado. Lo puedes cambiar al cobrar.', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+        Text('Aproximado. Lo puedes cambiar al cobrar.', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
         const SizedBox(height: 12),
         TecladoMonto(valor: _estimado, onChanged: (v) => setState(() => _estimado = v)),
         _siguiente(_avanzar),
@@ -369,8 +369,8 @@ class _AgendarScreenState extends State<AgendarScreen> {
         ),
       ]),
       const SizedBox(height: 14),
-      const Text('O busca el día en el calendario:', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
-      const SizedBox(height: 10),
+      Text('O busca el día en el calendario:', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+      SizedBox(height: 10),
       CalendarioMes(
         seleccionado: _dia,
         permitirPasado: false,
@@ -383,7 +383,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
   Widget _pantallaHora() {
     final hh = _hora;
     final mm = _paso == _Paso.hora ? null : _minuto;
-    const tenue = TextStyle(color: EC.textoTenue);
+    final tenue = TextStyle(color: EC.textoTenue);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(18)),
@@ -391,13 +391,13 @@ class _AgendarScreenState extends State<AgendarScreen> {
         Text.rich(
           TextSpan(children: [
             TextSpan(text: hh == null ? '–' : '${hh % 12 == 0 ? 12 : hh % 12}', style: hh == null ? tenue : null),
-            const TextSpan(text: ':', style: tenue),
+            TextSpan(text: ':', style: tenue),
             TextSpan(text: mm == null ? '– –' : mm.toString().padLeft(2, '0'), style: mm == null ? tenue : null),
           ]),
-          style: const TextStyle(fontSize: 58, fontWeight: FontWeight.w700, color: EC.texto, height: 1),
+          style: TextStyle(fontSize: 58, fontWeight: FontWeight.w700, color: EC.texto, height: 1),
         ),
         const SizedBox(height: 6),
-        Text(hh == null ? 'Elige la hora' : parteDelDia(hh), style: const TextStyle(fontSize: 19, color: EC.textoSuave)),
+        Text(hh == null ? 'Elige la hora' : parteDelDia(hh), style: TextStyle(fontSize: 19, color: EC.textoSuave)),
       ]),
     );
   }
@@ -518,7 +518,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
     final inicio = _hora! * 60 + _minuto!;
     return [
       Encabezado(titulo: '¿Cuánto tarda?', paso: _textoPaso(_Paso.duracion), onAtras: _atras),
-      Text('Empieza a las ${horaTexto(inicio)} ${parteDelDia(_hora!)}', style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+      Text('Empieza a las ${horaTexto(inicio)} ${parteDelDia(_hora!)}', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
       const SizedBox(height: 14),
       GridView.count(
         crossAxisCount: 2,
@@ -568,10 +568,10 @@ class _AgendarScreenState extends State<AgendarScreen> {
                             color: EC.texto,
                           )),
                       if (detalle != null && detalle.isNotEmpty)
-                        Text(detalle, style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+                        Text(detalle, style: TextStyle(fontSize: 16, color: EC.textoSuave)),
                     ]),
                   ),
-                  const Icon(Icons.edit_outlined, size: 22, color: EC.acento),
+                  Icon(Icons.edit_outlined, size: 22, color: EC.acento),
                 ]),
               ),
             ),
@@ -582,7 +582,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
     final separador = Divider(height: 1, color: EC.borde.withValues(alpha: 0.7));
     return [
       Encabezado(titulo: '¿Está bien así?', paso: _editando ? 'Cambiando datos' : null, onAtras: _atras),
-      const Text('Toca un dato para corregirlo.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+      Text('Toca un dato para corregirlo.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
       const SizedBox(height: 10),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -618,9 +618,9 @@ class _AgendarScreenState extends State<AgendarScreen> {
               Padding(
                 padding: const EdgeInsets.all(8),
                 child: Row(children: [
-                  const Icon(Icons.groups_outlined, size: 22, color: EC.textoSuave),
+                  Icon(Icons.groups_outlined, size: 22, color: EC.textoSuave),
                   const SizedBox(width: 10),
-                  Text(nombreEquipo(_equipo), style: const TextStyle(fontSize: 19, color: EC.textoSuave)),
+                  Text(nombreEquipo(_equipo), style: TextStyle(fontSize: 19, color: EC.textoSuave)),
                 ]),
               ),
             ],
@@ -629,7 +629,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
       ),
       if (widget.elegirEquipo) ...[
         const SizedBox(height: 16),
-        const Text('¿Qué equipo lo hace?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+        Text('¿Qué equipo lo hace?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
         const SizedBox(height: 8),
         Row(children: [
           for (final e in ['equipo1', 'equipo2']) ...[

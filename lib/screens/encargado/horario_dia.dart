@@ -109,7 +109,7 @@ class _HorarioDiaState extends State<HorarioDia> {
                   left: 0,
                   width: _anchoHoras - 8,
                   child: Text(_etiquetaHora(m ~/ 60),
-                      textAlign: TextAlign.right, style: const TextStyle(fontSize: 15, color: EC.textoSuave, fontWeight: FontWeight.w600)),
+                      textAlign: TextAlign.right, style: TextStyle(fontSize: 15, color: EC.textoSuave, fontWeight: FontWeight.w600)),
                 ));
               }
             }
@@ -130,7 +130,7 @@ class _HorarioDiaState extends State<HorarioDia> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: i.isOdd ? const Color(0x08000000) : Colors.transparent,
+                      color: i.isOdd ? EC.franja : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
@@ -166,7 +166,7 @@ class _HorarioDiaState extends State<HorarioDia> {
                   right: 0,
                   child: IgnorePointer(
                     child: Row(children: [
-                      Container(width: 10, height: 10, decoration: const BoxDecoration(color: EC.peligro, shape: BoxShape.circle)),
+                      Container(width: 10, height: 10, decoration: BoxDecoration(color: EC.peligro, shape: BoxShape.circle)),
                       Expanded(child: Container(height: 2, color: EC.peligro)),
                     ]),
                   ),
@@ -178,7 +178,7 @@ class _HorarioDiaState extends State<HorarioDia> {
         ),
         if (despues.isNotEmpty) _fueraDeHorario('Después de las 6 pm', despues),
         const SizedBox(height: 6),
-        const Text('Toca un espacio libre para agendar a esa hora.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+        Text('Toca un espacio libre para agendar a esa hora.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
       ],
     );
   }
@@ -186,7 +186,7 @@ class _HorarioDiaState extends State<HorarioDia> {
   /// (fondo, borde, texto) para un trabajo según el equipo.
   (Color, Color, Color) _colores(String equipo) => equipo == widget.equipoPropio || (widget.equipoPropio == null && equipo == 'equipo1')
       ? (EC.acentoFondo, EC.acento, EC.acentoTexto)
-      : (const Color(0xFFE1F5EE), const Color(0xFF1D9E75), const Color(0xFF085041));
+      : (EC.equipo2Fondo, EC.equipo2Borde, EC.equipo2Texto);
 
   Widget _bloque(VisitaAgenda t) {
     var (fondo, borde, texto) = _colores(t.equipoId);
@@ -203,7 +203,7 @@ class _HorarioDiaState extends State<HorarioDia> {
             final corto = c.maxHeight < 50;
             final titulo = Text.rich(
               TextSpan(children: [
-                if (t.completado) const WidgetSpan(child: Padding(padding: EdgeInsets.only(right: 3), child: Icon(Icons.check_circle, size: 15, color: EC.exitoTexto))),
+                if (t.completado) WidgetSpan(child: Padding(padding: EdgeInsets.only(right: 3), child: Icon(Icons.check_circle, size: 15, color: EC.exitoTexto))),
                 TextSpan(text: '${horaTexto(t.minutosDelDia)} ', style: const TextStyle(fontWeight: FontWeight.w800)),
                 if (t.fotos.isNotEmpty) ...[
                   WidgetSpan(
@@ -237,7 +237,7 @@ class _HorarioDiaState extends State<HorarioDia> {
   Widget _fueraDeHorario(String titulo, List<VisitaAgenda> lista) => Padding(
         padding: const EdgeInsets.only(bottom: 10, top: 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: EC.textoSuave)),
+          Text(titulo, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: EC.textoSuave)),
           const SizedBox(height: 4),
           for (final t in lista)
             Padding(

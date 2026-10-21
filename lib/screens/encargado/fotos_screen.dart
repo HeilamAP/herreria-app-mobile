@@ -29,7 +29,7 @@ class FotoMiniatura extends StatelessWidget {
               if (snap.connectionState != ConnectionState.done) return const SizedBox.expand();
               final bytes = snap.data;
               if (bytes == null) {
-                return const Center(child: Icon(Icons.image_not_supported_outlined, color: EC.textoTenue, size: 30));
+                return Center(child: Icon(Icons.image_not_supported_outlined, color: EC.textoTenue, size: 30));
               }
               return Ink.image(image: MemoryImage(bytes), fit: BoxFit.cover, child: const SizedBox.expand());
             },
@@ -149,11 +149,11 @@ class PreguntaFotosScreen extends StatelessWidget {
               padding: const EdgeInsets.all(18),
               children: [
                 const SizedBox(height: 6),
-                const Text('Último paso (opcional)', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
-                const Text('¿Quieres agregar fotos o una nota?',
+                Text('Último paso (opcional)', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+                Text('¿Quieres agregar fotos o una nota?',
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto, height: 1.2)),
                 const SizedBox(height: 4),
-                const Text('Sirve para recordar cómo quedó el trabajo.', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+                Text('Sirve para recordar cómo quedó el trabajo.', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
                 const SizedBox(height: 20),
                 BotonGrande(texto: 'Tomar fotos', icono: Icons.photo_camera_outlined, vertical: true, alto: 110, fontSize: 22,
                     onTap: () => abrir(camara: true)),
@@ -303,7 +303,7 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
-                        child: const Text('Todavía no hay fotos', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+                        child: Text('Todavía no hay fotos', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: EC.textoSuave)),
                       )
                     else
                       GridView.count(
@@ -340,7 +340,7 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
                         ],
                       ),
                     const SizedBox(height: 6),
-                    Text('${v.fotos.length} de ${VisitaAgenda.maxFotos} fotos', style: const TextStyle(fontSize: 15, color: EC.textoSuave)),
+                    Text('${v.fotos.length} de ${VisitaAgenda.maxFotos} fotos', style: TextStyle(fontSize: 15, color: EC.textoSuave)),
                     const SizedBox(height: 10),
                     if (_ocupado)
                       const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()))
@@ -370,7 +370,7 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
                         ),
                       ]),
                     const SizedBox(height: 20),
-                    const Text('Nota', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+                    Text('Nota', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _nota,
@@ -378,7 +378,7 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
                       minLines: 3,
                       maxLines: 6,
                       textCapitalization: TextCapitalization.sentences,
-                      style: const TextStyle(fontSize: 20, color: EC.texto),
+                      style: TextStyle(fontSize: 20, color: EC.texto),
                       decoration: const InputDecoration(hintText: 'Ej. Se cambió la tarjeta del motor. Volver en 6 meses.'),
                     ),
                     const SizedBox(height: 24),
@@ -409,14 +409,14 @@ class NotasYFotosResumen extends StatelessWidget {
     final extra = t.fotos.length - mostrar.length;
     return Material(
       color: EC.fondo,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: EC.borde)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: EC.borde)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onAbrir,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Row(children: [
+            Row(children: [
               Icon(Icons.edit_note, size: 22, color: EC.textoSuave),
               SizedBox(width: 6),
               Expanded(child: Text('Notas y fotos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: EC.textoSuave))),
@@ -424,7 +424,7 @@ class NotasYFotosResumen extends StatelessWidget {
             ]),
             if (t.notaFinal.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(t.notaFinal, style: const TextStyle(fontSize: 18, color: EC.texto)),
+              Text(t.notaFinal, style: TextStyle(fontSize: 18, color: EC.texto)),
             ],
             if (t.fotos.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -440,7 +440,7 @@ class NotasYFotosResumen extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(8)),
                         alignment: Alignment.center,
-                        child: Text('+$extra', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.textoSuave)),
+                        child: Text('+$extra', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.textoSuave)),
                       ),
                     ),
                   ),

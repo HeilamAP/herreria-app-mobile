@@ -1,27 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../services/aspecto_service.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/paleta.dart';
 
-/// Colores del modo encargado (claro y con buen contraste).
-class EC {
-  static const texto = Color(0xFF0F172A);
-  static const textoSuave = Color(0xFF475569);
-  static const textoTenue = Color(0xFF94A3B8);
-  static const fondo = Colors.white;
-  static const superficie = Color(0xFFF1F5F9);
-  static const borde = Color(0xFFCBD5E1);
-  static const bordeFuerte = Color(0xFF64748B);
-  static const acento = Color(0xFF0369A1);
-  static const acentoFondo = Color(0xFFE0F2FE);
-  static const acentoTexto = Color(0xFF075985);
-  static const exito = Color(0xFF15803D);
-  static const exitoFondo = Color(0xFFDCFCE7);
-  static const exitoTexto = Color(0xFF166534);
-  static const exitoBorde = Color(0xFF86EFAC);
-  static const peligro = Color(0xFFDC2626);
-  static const peligroFondo = Color(0xFFFEE2E2);
-  static const peligroTexto = Color(0xFF991B1B);
-}
+export '../../theme/paleta.dart';
+
 
 const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const diasLargos = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -122,6 +107,7 @@ class BotonGrande extends StatelessWidget {
   final bool seleccionado;
   final String? subtitulo;
   final double padding;
+  final bool ajustarTexto;
 
   const BotonGrande({
     super.key,
@@ -135,14 +121,15 @@ class BotonGrande extends StatelessWidget {
     this.seleccionado = false,
     this.subtitulo,
     this.padding = 12,
+    this.ajustarTexto = false,
   });
 
   @override
   Widget build(BuildContext context) {
     var (fondo, frente, borde) = switch (estilo) {
-      EstiloBoton.primario => (EC.acento, Colors.white, EC.acento),
+      EstiloBoton.primario => (EC.acentoRelleno, Colors.white, EC.acentoRelleno),
       EstiloBoton.exito => (EC.exito, Colors.white, EC.exito),
-      EstiloBoton.peligro => (EC.peligro, Colors.white, EC.peligro),
+      EstiloBoton.peligro => (EC.peligroRelleno, Colors.white, EC.peligroRelleno),
       EstiloBoton.peligroSuave => (EC.fondo, EC.peligroTexto, EC.peligro),
       EstiloBoton.acentoSuave => (EC.fondo, EC.acentoTexto, EC.acento),
       EstiloBoton.normal => (EC.superficie, EC.texto, EC.borde),
@@ -166,11 +153,19 @@ class BotonGrande extends StatelessWidget {
             if (icono != null) const SizedBox(height: 6),
             ...textos,
           ])
-        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            if (icono != null) Icon(icono, size: iconSize, color: frente),
-            if (icono != null) const SizedBox(width: 10),
-            Flexible(child: Column(mainAxisSize: MainAxisSize.min, children: textos)),
-          ]);
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: ajustarTexto ? MainAxisSize.min : MainAxisSize.max,
+            children: [
+              if (icono != null) Icon(icono, size: iconSize, color: frente),
+              if (icono != null) const SizedBox(width: 10),
+              // Con ajustarTexto, el FittedBox de abajo encoge todo; sin él, el texto se acomoda en renglones.
+              if (ajustarTexto)
+                Column(mainAxisSize: MainAxisSize.min, children: textos)
+              else
+                Flexible(child: Column(mainAxisSize: MainAxisSize.min, children: textos)),
+            ],
+          );
     return Material(
       color: fondo,
       shape: RoundedRectangleBorder(
@@ -182,7 +177,11 @@ class BotonGrande extends StatelessWidget {
         onTap: onTap,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: alto),
-          child: Padding(padding: EdgeInsets.symmetric(horizontal: padding, vertical: 8), child: Center(child: contenido)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: padding, vertical: 8),
+            // En botones de alto fijo, el texto se encoge si no cabe (p. ej. con la letra agrandada del celular).
+            child: Center(child: ajustarTexto ? FittedBox(fit: BoxFit.scaleDown, child: contenido) : contenido),
+          ),
         ),
       ),
     );
@@ -211,8 +210,8 @@ class Encabezado extends StatelessWidget {
                 onPressed: onAtras,
                 tooltip: 'Atrás',
                 iconSize: 28,
-                style: IconButton.styleFrom(side: const BorderSide(color: EC.borde)),
-                icon: const Icon(Icons.arrow_back, color: EC.texto),
+                style: IconButton.styleFrom(side: BorderSide(color: EC.borde)),
+                icon: Icon(Icons.arrow_back, color: EC.texto),
               ),
             ),
             const SizedBox(width: 12),
@@ -221,8 +220,8 @@ class Encabezado extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (paso != null) Text(paso!, style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
-                Text(titulo, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto, height: 1.2)),
+                if (paso != null) Text(paso!, style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+                Text(titulo, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto, height: 1.2)),
               ],
             ),
           ),
@@ -249,7 +248,7 @@ class SelectorConFlechas extends StatelessWidget {
             onPressed: onTap,
             tooltip: tooltip,
             iconSize: 30,
-            style: IconButton.styleFrom(side: const BorderSide(color: EC.borde)),
+            style: IconButton.styleFrom(side: BorderSide(color: EC.borde)),
             icon: Icon(icono, color: EC.texto),
           ),
         ),
@@ -263,7 +262,7 @@ class SelectorConFlechas extends StatelessWidget {
         Expanded(
           child: Text(texto,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
         ),
         _flecha(Icons.chevron_right, onSiguiente, 'Siguiente'),
       ],
@@ -275,9 +274,9 @@ class SelectorConFlechas extends StatelessWidget {
 class DatoMonto extends StatelessWidget {
   final String etiqueta;
   final String valor;
-  final Color color;
+  final Color? color;
 
-  const DatoMonto({super.key, required this.etiqueta, required this.valor, this.color = EC.texto});
+  const DatoMonto({super.key, required this.etiqueta, required this.valor, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -287,11 +286,11 @@ class DatoMonto extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(etiqueta, style: const TextStyle(fontSize: 15, color: EC.textoSuave)),
+          Text(etiqueta, style: TextStyle(fontSize: 15, color: EC.textoSuave)),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(valor, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: color)),
+            child: Text(valor, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: color ?? EC.texto)),
           ),
         ],
       ),
@@ -308,7 +307,7 @@ class TextoError extends StatelessWidget {
       ? const SizedBox.shrink()
       : Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Text(mensaje!, style: const TextStyle(fontSize: 17, color: EC.peligro, fontWeight: FontWeight.w600)),
+          child: Text(mensaje!, style: TextStyle(fontSize: 17, color: EC.peligro, fontWeight: FontWeight.w600)),
         );
 }
 
@@ -338,8 +337,8 @@ class CampoGrande extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text.rich(TextSpan(children: [
-          TextSpan(text: etiqueta, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
-          if (opcional != null) TextSpan(text: '  $opcional', style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+          TextSpan(text: etiqueta, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+          if (opcional != null) TextSpan(text: '  $opcional', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
         ])),
         const SizedBox(height: 8),
         TextField(
@@ -347,7 +346,7 @@ class CampoGrande extends StatelessWidget {
           keyboardType: teclado,
           textCapitalization: mayusculas,
           onChanged: onChanged,
-          style: const TextStyle(fontSize: 21, color: EC.texto),
+          style: TextStyle(fontSize: 21, color: EC.texto),
           decoration: InputDecoration(hintText: ejemplo),
         ),
       ],
@@ -379,10 +378,10 @@ class TecladoMonto extends StatelessWidget {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: EC.bordeFuerte, width: 2))),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: EC.bordeFuerte, width: 2))),
           child: Text(dinero(int.tryParse(valor) ?? 0),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w700, color: EC.texto)),
+              style: TextStyle(fontSize: 46, fontWeight: FontWeight.w700, color: EC.texto)),
         ),
         const SizedBox(height: 12),
         GridView.count(
@@ -464,7 +463,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
             Expanded(
               child: Text('${nombreMes[0].toUpperCase()}${nombreMes.substring(1)} ${_mes.year}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700, color: EC.texto)),
+                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700, color: EC.texto)),
             ),
             _flecha(Icons.chevron_right, () => _mover(1), 'Mes siguiente'),
           ],
@@ -494,7 +493,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text.rich(TextSpan(children: [
+        Text.rich(TextSpan(children: [
           TextSpan(text: '●  ', style: TextStyle(color: EC.acento, fontSize: 15)),
           TextSpan(text: 'trabajos pendientes ese día', style: TextStyle(color: EC.textoSuave, fontSize: 16)),
         ])),
@@ -512,7 +511,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
             onPressed: onTap,
             tooltip: tooltip,
             iconSize: 30,
-            style: IconButton.styleFrom(side: const BorderSide(color: EC.borde)),
+            style: IconButton.styleFrom(side: BorderSide(color: EC.borde)),
             icon: Icon(icono, color: EC.texto),
           ),
         ),
@@ -557,13 +556,95 @@ class _CalendarioMesState extends State<CalendarioMes> {
             SizedBox(
               height: 12,
               child: Text(n > 0 ? '●' * (n > 3 ? 3 : n) : '',
-                  style: const TextStyle(fontSize: 9, color: EC.acento, height: 1.2)),
+                  style: TextStyle(fontSize: 9, color: EC.acento, height: 1.2)),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Botón de la luna (o el sol en modo oscuro) que abre "Aspecto de la app".
+class BotonAspecto extends StatelessWidget {
+  const BotonAspecto({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: IconButton.outlined(
+        tooltip: 'Aspecto de la app',
+        onPressed: () => mostrarAspecto(context),
+        style: IconButton.styleFrom(side: BorderSide(color: EC.borde)),
+        icon: Icon(EC.oscuro ? Icons.light_mode_outlined : Icons.dark_mode_outlined, color: EC.textoSuave),
+      ),
+    );
+  }
+}
+
+/// Hoja "Aspecto de la app": Claro, Oscuro o Como el celular.
+void mostrarAspecto(BuildContext context) {
+  final servicio = context.read<AspectoService>();
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: EC.fondo,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) {
+      Widget opcion(String valor, IconData icono, String titulo, String detalle) {
+        final elegida = servicio.aspecto == valor;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Material(
+            color: elegida ? EC.acentoFondo : EC.superficie,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: elegida ? EC.acento : EC.borde, width: elegida ? 2 : 1),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                servicio.cambiar(valor);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                child: Row(children: [
+                  Icon(icono, size: 30, color: elegida ? EC.acentoTexto : EC.texto),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(titulo,
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: elegida ? EC.acentoTexto : EC.texto)),
+                      Text(detalle, style: TextStyle(fontSize: 16, color: elegida ? EC.acentoTexto : EC.textoSuave)),
+                    ]),
+                  ),
+                  if (elegida) Icon(Icons.check, size: 28, color: EC.acentoTexto),
+                ]),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return EncargadoPage(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 8),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Aspecto de la app', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+              Text('Se guarda en este celular.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+              const SizedBox(height: 16),
+              opcion('claro', Icons.light_mode_outlined, 'Claro', 'Fondo blanco'),
+              opcion('oscuro', Icons.dark_mode_outlined, 'Oscuro', 'Fondo oscuro, cansa menos la vista de noche'),
+              opcion('sistema', Icons.smartphone_outlined, 'Como el celular', 'Cambia solo según el ajuste del celular'),
+            ]),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// Pantalla de confirmación con palomita. Ofrece corregir lo que se acaba de
@@ -593,16 +674,16 @@ class PantallaListo extends StatelessWidget {
                   child: Container(
                     width: 120,
                     height: 120,
-                    decoration: const BoxDecoration(color: EC.exitoFondo, shape: BoxShape.circle),
-                    child: const Icon(Icons.check_rounded, size: 76, color: EC.exitoTexto),
+                    decoration: BoxDecoration(color: EC.exitoFondo, shape: BoxShape.circle),
+                    child: Icon(Icons.check_rounded, size: 76, color: EC.exitoTexto),
                   ),
                 ),
                 const SizedBox(height: 18),
                 Text(titulo,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: EC.texto)),
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: EC.texto)),
                 const SizedBox(height: 8),
-                Text(mensaje, textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, color: EC.textoSuave, height: 1.35)),
+                Text(mensaje, textAlign: TextAlign.center, style: TextStyle(fontSize: 21, color: EC.textoSuave, height: 1.35)),
                 const SizedBox(height: 32),
                 BotonGrande(texto: 'Listo', estilo: EstiloBoton.primario, onTap: () => Navigator.of(context).pop()),
                 if (onCorregir != null) ...[
@@ -659,16 +740,16 @@ class PantallaBorrar extends StatelessWidget {
                   child: Container(
                     width: 104,
                     height: 104,
-                    decoration: const BoxDecoration(color: EC.peligroFondo, shape: BoxShape.circle),
-                    child: const Icon(Icons.delete_outline, size: 58, color: EC.peligroTexto),
+                    decoration: BoxDecoration(color: EC.peligroFondo, shape: BoxShape.circle),
+                    child: Icon(Icons.delete_outline, size: 58, color: EC.peligroTexto),
                   ),
                 ),
                 const SizedBox(height: 18),
                 Text(pregunta,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
                 const SizedBox(height: 8),
-                Text(detalle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, color: EC.textoSuave, height: 1.35)),
+                Text(detalle, textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave, height: 1.35)),
                 const SizedBox(height: 32),
                 BotonGrande(texto: 'Sí, borrar', estilo: EstiloBoton.peligro, onTap: onBorrar),
                 const SizedBox(height: 12),

@@ -57,8 +57,8 @@ class _AdminInicioScreenState extends State<AdminInicioScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            Text('Hola, $nombre', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-            Text(subtitulo, style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+            Text('Hola, $nombre', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+            Text(subtitulo, style: TextStyle(fontSize: 18, color: EC.textoSuave)),
             const SizedBox(height: 12),
             Wrap(spacing: 8, children: [
               for (final p in [('hoy', 'Hoy'), ('semana', 'Esta semana'), ('mes', 'Este mes')])
@@ -76,7 +76,7 @@ class _AdminInicioScreenState extends State<AdminInicioScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
                   const SizedBox(height: 8),
                   _linea('Quedó (cobrado − gastos)', dinero(totalQuedo)),
                   _linea('Pago a trabajadores', '−${dinero(nomina)}', color: EC.peligroTexto),
@@ -91,11 +91,11 @@ class _AdminInicioScreenState extends State<AdminInicioScreen> {
     );
   }
 
-  Widget _linea(String texto, String valor, {Color color = EC.texto, bool grande = false}) => Padding(
+  Widget _linea(String texto, String valor, {Color? color, bool grande = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(children: [
           Expanded(child: Text(texto, style: TextStyle(fontSize: grande ? 19 : 17, color: EC.textoSuave))),
-          Text(valor, style: TextStyle(fontSize: grande ? 26 : 19, fontWeight: FontWeight.w700, color: color)),
+          Text(valor, style: TextStyle(fontSize: grande ? 26 : 19, fontWeight: FontWeight.w700, color: color ?? EC.texto)),
         ]),
       );
 }
@@ -109,17 +109,17 @@ class _TarjetaEquipo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget dato(String etiqueta, double valor, {Color color = EC.texto}) => Container(
+    Widget dato(String etiqueta, double valor, {Color? color}) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(12)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(etiqueta, style: const TextStyle(fontSize: 15, color: EC.textoSuave)),
+              Text(etiqueta, style: TextStyle(fontSize: 15, color: EC.textoSuave)),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text(dinero(valor), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color)),
+                child: Text(dinero(valor), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color ?? EC.texto)),
               ),
             ],
           ),
@@ -132,13 +132,13 @@ class _TarjetaEquipo extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(children: [
-            const Icon(Icons.groups_outlined, color: EC.textoSuave),
+            Icon(Icons.groups_outlined, color: EC.textoSuave),
             const SizedBox(width: 8),
-            Expanded(child: Text(titulo, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto))),
+            Expanded(child: Text(titulo, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto))),
           ]),
           Text(
             pendientesHoy == 0 ? 'Sin trabajos pendientes hoy' : '$pendientesHoy pendiente${pendientesHoy == 1 ? '' : 's'} hoy',
-            style: const TextStyle(fontSize: 16, color: EC.textoSuave),
+            style: TextStyle(fontSize: 16, color: EC.textoSuave),
           ),
           const SizedBox(height: 10),
           GridView.count(

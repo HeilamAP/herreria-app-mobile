@@ -12,14 +12,7 @@ import 'encargado/ui.dart';
 import 'respaldos_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  final VoidCallback onToggleTheme;
-  final bool isDarkMode;
-
-  const MainNavigationScreen({
-    super.key,
-    required this.onToggleTheme,
-    required this.isDarkMode,
-  });
+  const MainNavigationScreen({super.key});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -39,7 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         'Agenda',
         Icons.calendar_month_outlined,
         Icons.calendar_month,
-        const EncargadoPage(child: ColoredBox(color: EC.fondo, child: TrabajosDiaScreen(admin: true))),
+        EncargadoPage(child: ColoredBox(color: EC.fondo, child: TrabajosDiaScreen(admin: true))),
       ),
       _NavDestination('Personal', Icons.people_outline, Icons.people, const EmpleadosScreen()),
       _NavDestination('Reportes', Icons.description_outlined, Icons.description, const RespaldosScreen()),
@@ -52,8 +45,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).cardColor,
-        elevation: 2,
+        backgroundColor: EC.fondo,
+        surfaceTintColor: EC.fondo,
+        elevation: 1,
         title: Row(
           children: [
             Container(
@@ -85,12 +79,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ],
         ),
         actions: [
-          // Theme Toggle Button
-          IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            tooltip: 'Cambiar Tema',
-            onPressed: widget.onToggleTheme,
-          ),
+          // Claro, oscuro o como el celular (el mismo selector que usan los encargados)
+          const BotonAspecto(),
+          const SizedBox(width: 8),
 
           // User badge & logout
           Padding(
@@ -161,9 +152,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 });
               },
               labelType: NavigationRailLabelType.all,
-              backgroundColor: Theme.of(context).cardColor,
-              selectedIconTheme: const IconThemeData(color: AppTheme.primaryCyan),
-              selectedLabelTextStyle: const TextStyle(color: AppTheme.primaryCyan, fontWeight: FontWeight.bold),
+              backgroundColor: EC.fondo,
+              selectedIconTheme: IconThemeData(color: EC.acento),
+              selectedLabelTextStyle: TextStyle(color: EC.acento, fontWeight: FontWeight.bold),
               destinations: destinations.map((d) {
                 return NavigationRailDestination(
                   icon: Icon(d.icon),
@@ -190,9 +181,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 });
               },
               type: BottomNavigationBarType.fixed,
-              backgroundColor: Theme.of(context).cardColor,
-              selectedItemColor: AppTheme.primaryCyan,
-              unselectedItemColor: const Color(0xFF94A3B8),
+              backgroundColor: EC.fondo,
+              selectedItemColor: EC.acento,
+              unselectedItemColor: EC.textoSuave,
               items: destinations.map((d) {
                 return BottomNavigationBarItem(
                   icon: Icon(d.icon),

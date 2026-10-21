@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'paleta.dart';
 
 class AppTheme {
   static const Color primaryCyan = Color(0xFF06B6D4);
@@ -75,20 +76,58 @@ class AppTheme {
     );
   }
 
-  /// Tema de las pantallas de los encargados: claro, alto contraste y letra grande.
+  /// Tema de toda la app: alto contraste y letra grande, en claro u oscuro según la
+  /// paleta activa (ver [EC]). Lo usan los encargados y el administrador.
   static ThemeData get encargadoTheme {
-    final base = lightTheme;
+    final oscuro = EC.oscuro;
+    final base = oscuro ? darkTheme : lightTheme;
+    OutlineInputBorder linea(Color color, [double ancho = 1]) =>
+        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: color, width: ancho));
     return base.copyWith(
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: EC.fondo,
+      canvasColor: EC.fondo,
+      cardColor: EC.superficie,
+      colorScheme: base.colorScheme.copyWith(
+        primary: EC.acento,
+        onPrimary: Colors.white,
+        surface: EC.fondo,
+        onSurface: EC.texto,
+        error: EC.peligro,
+      ),
       // englishLike2021 trae los tamaños definidos, que es lo que necesita fontSizeFactor.
       textTheme: Typography.englishLike2021.merge(base.textTheme).apply(
         fontSizeFactor: 1.15,
-        bodyColor: const Color(0xFF0F172A),
-        displayColor: const Color(0xFF0F172A),
+        bodyColor: EC.texto,
+        displayColor: EC.texto,
       ),
-      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+      iconTheme: IconThemeData(color: EC.texto),
+      appBarTheme: AppBarTheme(backgroundColor: EC.fondo, foregroundColor: EC.texto, surfaceTintColor: EC.fondo),
+      cardTheme: CardThemeData(
+        color: EC.superficie,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: EC.borde)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: EC.fondo,
+        surfaceTintColor: EC.fondo,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: EC.borde)),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(backgroundColor: EC.fondo, surfaceTintColor: EC.fondo),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: oscuro ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+        contentTextStyle: TextStyle(color: oscuro ? const Color(0xFF0F172A) : Colors.white, fontSize: 17),
+      ),
+      textSelectionTheme: TextSelectionThemeData(cursorColor: EC.acento, selectionHandleColor: EC.acento),
+      dividerColor: EC.borde,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: EC.superficie,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        hintStyle: const TextStyle(fontSize: 20, color: Color(0xFF94A3B8)),
+        border: linea(EC.borde),
+        enabledBorder: linea(EC.borde),
+        focusedBorder: linea(EC.acento, 2),
+        labelStyle: TextStyle(color: EC.textoSuave),
+        hintStyle: TextStyle(fontSize: 20, color: EC.textoTenue),
       ),
     );
   }

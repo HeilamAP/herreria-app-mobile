@@ -30,8 +30,8 @@ class GastosEquipoScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        const Text('Gastos de hoy', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-        Text(diaTexto(hoy()), style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+        Text('Gastos de hoy', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+        Text(diaTexto(hoy()), style: TextStyle(fontSize: 18, color: EC.textoSuave)),
         const SizedBox(height: 14),
         BotonGrande(
           texto: 'Anotar gasto',
@@ -44,12 +44,12 @@ class GastosEquipoScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
-            child: const Text('Hoy no has anotado gastos', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
+            child: Text('Hoy no has anotado gastos', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
           ),
         for (final g in gastos) ...[
           Material(
             color: EC.fondo,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EC.bordeFuerte)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: EC.bordeFuerte)),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () => abrirOpcionesGasto(context, g),
@@ -58,8 +58,8 @@ class GastosEquipoScreen extends StatelessWidget {
                 child: Row(children: [
                   Icon(iconoDeCategoria(g.categoria), size: 30, color: EC.textoSuave),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(g.descripcion.isNotEmpty ? g.descripcion : g.categoria, style: const TextStyle(fontSize: 21, color: EC.texto))),
-                  Text(dinero(g.monto), style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700, color: EC.peligroTexto)),
+                  Expanded(child: Text(g.descripcion.isNotEmpty ? g.descripcion : g.categoria, style: TextStyle(fontSize: 21, color: EC.texto))),
+                  Text(dinero(g.monto), style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700, color: EC.peligroTexto)),
                 ]),
               ),
             ),
@@ -68,9 +68,9 @@ class GastosEquipoScreen extends StatelessWidget {
         ],
         if (gastos.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text('Total: ${dinero(total)}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
+          Text('Total: ${dinero(total)}', textAlign: TextAlign.right, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
           const SizedBox(height: 6),
-          const Text('Toca un gasto para corregirlo o borrarlo.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+          Text('Toca un gasto para corregirlo o borrarlo.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
         ],
       ],
     );
@@ -94,11 +94,11 @@ void abrirOpcionesGasto(BuildContext context, Gasto g) {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(g.descripcion.isNotEmpty ? g.descripcion : g.categoria,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
               ),
-              Text(dinero(g.monto), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.peligroTexto)),
+              Text(dinero(g.monto), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.peligroTexto)),
             ]),
-            Text(diaTexto(fechaDeKey(g.fecha)), style: const TextStyle(fontSize: 17, color: EC.textoSuave)),
+            Text(diaTexto(fechaDeKey(g.fecha)), style: TextStyle(fontSize: 17, color: EC.textoSuave)),
             const SizedBox(height: 18),
             BotonGrande(
               texto: 'Corregir este gasto',
@@ -265,7 +265,7 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
                         onAtras: _atras,
                       ),
                       if (widget.existente != null)
-                        const Text('Para cambiar la categoría, toca la flecha de atrás.',
+                        Text('Para cambiar la categoría, toca la flecha de atrás.',
                             style: TextStyle(fontSize: 17, color: EC.textoSuave)),
                       const SizedBox(height: 12),
                       TecladoMonto(

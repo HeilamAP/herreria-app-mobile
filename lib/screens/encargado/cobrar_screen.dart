@@ -220,7 +220,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
     return [
       Encabezado(titulo: titulo, paso: _pasoTexto, onAtras: _atras),
       if (prellenado)
-        const Text('Ya pusimos lo que agendaste. Cámbialo si cobraste otra cantidad.',
+        Text('Ya pusimos lo que agendaste. Cámbialo si cobraste otra cantidad.',
             style: TextStyle(fontSize: 17, color: EC.textoSuave)),
       const SizedBox(height: 12),
       TecladoMonto(
@@ -250,7 +250,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
   List<Widget> _pasoForma() => [
         Encabezado(titulo: '¿Cómo te pagó?', paso: _pasoTexto, onAtras: _atras),
         const SizedBox(height: 6),
-        Text(dinero(int.parse(_monto)), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: EC.texto)),
+        Text(dinero(int.parse(_monto)), style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: EC.texto)),
         const SizedBox(height: 18),
         BotonGrande(
           texto: 'Efectivo',

@@ -32,18 +32,20 @@ class _EncargadoShellState extends State<EncargadoShell> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hola, $nombre', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-              Text(nombreEquipo(auth.currentUser?.equipoId ?? ''), style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+              Text('Hola, $nombre', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+              Text(nombreEquipo(auth.currentUser?.equipoId ?? ''), style: TextStyle(fontSize: 16, color: EC.textoSuave)),
             ],
           ),
           actions: [
+            const BotonAspecto(),
+            const SizedBox(width: 8),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: OutlinedButton.icon(
                 onPressed: auth.logout,
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), side: const BorderSide(color: EC.borde)),
-                icon: const Icon(Icons.logout, color: EC.textoSuave),
-                label: const Text('Salir', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48), side: BorderSide(color: EC.borde)),
+                icon: Icon(Icons.logout, color: EC.textoSuave),
+                label: Text('Salir', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
               ),
             ),
           ],

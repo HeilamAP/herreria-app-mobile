@@ -43,8 +43,8 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         Text(_semana ? 'Resumen de la semana' : 'Resumen de hoy',
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-        if (!_semana) Text(diaTexto(hoy()), style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+        if (!_semana) Text(diaTexto(hoy()), style: TextStyle(fontSize: 18, color: EC.textoSuave)),
         const SizedBox(height: 12),
         _selectorPeriodo(),
         if (_semana) ...[
@@ -67,20 +67,20 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
         _seccion(DetalleResumen.transferencia, Icons.account_balance_outlined, 'Transferencia', dinero(r.transferencia), equipo),
         _seccion(DetalleResumen.gastos, Icons.receipt_long_outlined, 'Gastos', r.gastos > 0 ? '−${dinero(r.gastos)}' : dinero(0), equipo,
             color: EC.peligroTexto),
-        const Text('Toca un renglón para ver el detalle.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+        Text('Toca un renglón para ver el detalle.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Lo que quedó $cuando', style: const TextStyle(fontSize: 20, color: EC.textoSuave)),
+            Text('Lo que quedó $cuando', style: TextStyle(fontSize: 20, color: EC.textoSuave)),
             Text(dinero(r.efectivo + r.transferencia - r.gastos),
-                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: EC.texto)),
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: EC.texto)),
           ]),
         ),
         if (r.ventas > 0) ...[
           const SizedBox(height: 10),
-          Text('De lo cobrado, ${dinero(r.ventas)} fueron ventas.', style: const TextStyle(fontSize: 17, color: EC.textoSuave)),
+          Text('De lo cobrado, ${dinero(r.ventas)} fueron ventas.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
         ],
       ],
     );
@@ -127,7 +127,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     );
   }
 
-  Widget _seccion(DetalleResumen detalle, IconData icono, String texto, String valor, String equipo, {Color color = EC.texto}) {
+  Widget _seccion(DetalleResumen detalle, IconData icono, String texto, String valor, String equipo, {Color? color}) {
     final abierto = _abiertos.contains(detalle);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -148,12 +148,12 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
                 child: Row(children: [
                   Icon(icono, size: 28, color: EC.textoSuave),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(texto, style: const TextStyle(fontSize: 21, color: EC.texto))),
-                  Text(valor, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color)),
+                  Expanded(child: Text(texto, style: TextStyle(fontSize: 21, color: EC.texto))),
+                  Text(valor, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color ?? EC.texto)),
                   AnimatedRotation(
                     turns: abierto ? 0.25 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.chevron_right, size: 30, color: EC.textoSuave),
+                    child: Icon(Icons.chevron_right, size: 30, color: EC.textoSuave),
                   ),
                 ]),
               ),
@@ -184,7 +184,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
         padding: EdgeInsets.fromLTRB(4, filas.isEmpty ? 2 : 10, 4, 6),
         child: Row(children: [
           Expanded(
-            child: Text(_nombreDia(fecha), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: EC.texto)),
+            child: Text(_nombreDia(fecha), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: EC.texto)),
           ),
           Text(esGastos ? '−${dinero(totalDia)}' : dinero(totalDia),
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: esGastos ? EC.peligroTexto : EC.textoSuave)),
@@ -225,7 +225,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     final cuando = _cuando;
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(color: EC.superficie, border: Border(top: BorderSide(color: EC.borde))),
+      decoration: BoxDecoration(color: EC.superficie, border: Border(top: BorderSide(color: EC.borde))),
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -238,7 +238,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
                     ? 'No hay gastos $cuando'
                     : 'No hay cobros ${detalle == DetalleResumen.efectivo ? 'en efectivo' : 'por transferencia'} $cuando',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, color: EC.textoSuave),
+                style: TextStyle(fontSize: 18, color: EC.textoSuave),
               ),
             )
           else ...[
@@ -247,7 +247,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
               child: Text(
                 esGastos ? 'Toca un gasto para corregirlo o borrarlo.' : 'Toca un cobro para cambiarlo o borrarlo.',
-                style: const TextStyle(fontSize: 15, color: EC.textoSuave),
+                style: TextStyle(fontSize: 15, color: EC.textoSuave),
               ),
             ),
           ],
@@ -270,13 +270,13 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     required String abajo,
     required String monto,
     required VoidCallback onTap,
-    Color color = EC.texto,
+    Color? color,
   }) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Material(
           color: EC.fondo,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: EC.borde)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: EC.borde)),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: onTap,
@@ -287,12 +287,12 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(arriba, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
-                    if (abajo.isNotEmpty) Text(abajo, style: const TextStyle(fontSize: 15, color: EC.textoSuave)),
+                    Text(arriba, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
+                    if (abajo.isNotEmpty) Text(abajo, style: TextStyle(fontSize: 15, color: EC.textoSuave)),
                   ]),
                 ),
                 const SizedBox(width: 8),
-                Text(monto, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+                Text(monto, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color ?? EC.texto)),
               ]),
             ),
           ),

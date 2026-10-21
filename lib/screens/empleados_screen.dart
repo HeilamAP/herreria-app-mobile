@@ -33,8 +33,8 @@ class _EmpleadosScreenState extends State<EmpleadosScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
-            const Text('Personal', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-            const Text('Pagos de la semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+            Text('Personal', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+            Text('Pagos de la semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
             const SizedBox(height: 14),
             SelectorConFlechas(
               texto: semanaTexto(_lunes),
@@ -55,8 +55,8 @@ class _EmpleadosScreenState extends State<EmpleadosScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Total a pagar esta semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
-                  Text(dinero(total), style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: EC.texto)),
+                  Text('Total a pagar esta semana', style: TextStyle(fontSize: 18, color: EC.textoSuave)),
+                  Text(dinero(total), style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: EC.texto)),
                 ],
               ),
             ),
@@ -72,7 +72,7 @@ class _EmpleadosScreenState extends State<EmpleadosScreen> {
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
-                child: const Text('Todavía no hay empleados', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
+                child: Text('Todavía no hay empleados', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, color: EC.textoSuave)),
               ),
             for (final e in empleados) ...[
               _TarjetaEmpleado(
@@ -149,15 +149,15 @@ class _TarjetaEmpleado extends StatelessWidget {
               radius: 26,
               backgroundColor: EC.acentoFondo,
               child: Text(e.nombre.isNotEmpty ? e.nombre[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.acentoTexto)),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: EC.acentoTexto)),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(e.nombre, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: EC.texto)),
-                  Text(detalle, style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+                  Text(e.nombre, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: EC.texto)),
+                  Text(detalle, style: TextStyle(fontSize: 16, color: EC.textoSuave)),
                 ],
               ),
             ),
@@ -184,9 +184,9 @@ class _TarjetaEmpleado extends StatelessWidget {
           Row(children: [
             Expanded(
               child: Text(pagado ? 'Neto a pagar' : 'Sin pago registrado',
-                  style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+                  style: TextStyle(fontSize: 18, color: EC.textoSuave)),
             ),
-            Text(dinero(pago.calcularNeto()), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.texto)),
+            Text(dinero(pago.calcularNeto()), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.texto)),
           ]),
           const SizedBox(height: 12),
           BotonGrande(
@@ -279,7 +279,7 @@ class _NuevoEmpleadoScreenState extends State<NuevoEmpleadoScreen> {
                   const SizedBox(height: 18),
                   CampoGrande(etiqueta: 'Puesto', opcional: '(opcional)', controller: _puesto, ejemplo: 'Instalador'),
                   const SizedBox(height: 18),
-                  const Text('¿En qué equipo trabaja?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+                  Text('¿En qué equipo trabaja?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
                   const SizedBox(height: 8),
                   Row(children: [
                     Expanded(child: BotonGrande(texto: 'Equipo 1', alto: 56, seleccionado: _equipo == 'equipo1', onTap: () => setState(() => _equipo = 'equipo1'))),
@@ -414,8 +414,8 @@ class _PagoSemanalScreenState extends State<PagoSemanalScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
                     child: Row(children: [
-                      const Expanded(child: Text('Neto a pagar', style: TextStyle(fontSize: 20, color: EC.textoSuave))),
-                      Text(dinero(_neto), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: EC.texto)),
+                      Expanded(child: Text('Neto a pagar', style: TextStyle(fontSize: 20, color: EC.textoSuave))),
+                      Text(dinero(_neto), style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: EC.texto)),
                     ]),
                   ),
                   const SizedBox(height: 24),

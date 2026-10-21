@@ -61,6 +61,14 @@ class StorageService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Aspecto elegido en este celular: 'claro' (predeterminado), 'oscuro' o 'sistema'.
+  /// Se guarda aparte de los datos del negocio porque es de cada teléfono.
+  String get aspecto => _prefs?.getString('${_clave}_aspecto') ?? 'claro';
+
+  Future<void> guardarAspecto(String aspecto) async {
+    await _prefs?.setString('${_clave}_aspecto', aspecto);
+  }
+
   String exportJson() {
     return const JsonEncoder.withIndent('  ').convert(_data.toJson());
   }
