@@ -52,7 +52,7 @@ class GastosEquipoScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EC.bordeFuerte)),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => _borrar(context, g),
+              onTap: () => borrarGastoConConfirmacion(context, g),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(children: [
@@ -76,7 +76,10 @@ class GastosEquipoScreen extends StatelessWidget {
     );
   }
 
-  void _borrar(BuildContext context, Gasto g) {
+}
+
+/// Pregunta si se borra el gasto y deja "deshacer" en la pantalla de confirmación.
+void borrarGastoConConfirmacion(BuildContext context, Gasto g) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (ctx) => PantallaBorrar(
         pregunta: '¿Borrar este gasto?',
@@ -95,7 +98,6 @@ class GastosEquipoScreen extends StatelessWidget {
         },
       ),
     ));
-  }
 }
 
 class NuevoGastoScreen extends StatefulWidget {

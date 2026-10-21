@@ -92,6 +92,25 @@ void main() {
     expect(huecoEquipo, 'equipo2');
   });
 
+  test('El detalle del Resumen separa efectivo y transferencia', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final engine = AppEngineService(storage: storage);
+    VisitaAgenda cobro(String id, String metodo, String estado, String hora) => VisitaAgenda(
+          id: id, cliente: id, fecha: '2030-01-07', hora: hora, tipo: 'Instalación', direccion: '',
+          telefono: '', notas: '', estado: estado, equipoId: 'equipo1', monto: 500, metodoPago: metodo,
+        );
+    engine.saveVisitaAgenda(cobro('efe_tarde', 'efectivo', 'completado', '15:00'));
+    engine.saveVisitaAgenda(cobro('efe_manana', 'efectivo', 'completado', '09:00'));
+    engine.saveVisitaAgenda(cobro('trans', 'transferencia', 'completado', '10:00'));
+    engine.saveVisitaAgenda(cobro('pendiente', 'efectivo', 'pendiente', '11:00'));
+
+    expect(engine.cobrosDelDia('equipo1', '2030-01-07', 'efectivo').map((t) => t.id), ['efe_manana', 'efe_tarde']);
+    expect(engine.cobrosDelDia('equipo1', '2030-01-07', 'transferencia').map((t) => t.id), ['trans']);
+    expect(engine.cobrosDelDia('equipo2', '2030-01-07', 'efectivo'), isEmpty);
+  });
+
   test('La hora se lee en formato nuevo y viejo', () {
     expect(VisitaAgenda.minutosDeHora('14:30'), 14 * 60 + 30);
     expect(VisitaAgenda.minutosDeHora('02:30 PM'), 14 * 60 + 30);

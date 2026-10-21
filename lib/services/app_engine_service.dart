@@ -418,6 +418,17 @@ class AppEngineService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Trabajos y ventas cobrados en una fecha con cierta forma de pago ('efectivo' | 'transferencia').
+  List<VisitaAgenda> cobrosDelDia(String equipoId, String fecha, String metodo) {
+    final list = getAgendaFiltered(equipoId).where((a) {
+      if (!a.completado || a.fecha != fecha) return false;
+      final esTransferencia = a.metodoPago.toLowerCase() == 'transferencia';
+      return metodo == 'transferencia' ? esTransferencia : !esTransferencia;
+    }).toList();
+    list.sort((a, b) => a.minutosDelDia.compareTo(b.minutosDelDia));
+    return list;
+  }
+
   List<Gasto> gastosDelDia(String equipoId, String fecha) =>
       getGastosFiltered(equipoId).where((g) => g.fecha == fecha).toList();
 
