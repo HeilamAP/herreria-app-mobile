@@ -6,12 +6,20 @@ import 'ui.dart';
 
 /// Cobrar un trabajo (monto → forma de pago) o registrar una venta rápida
 /// sin cita (cliente → precio → forma de pago) cuando [trabajo] es null.
+/// Con [corregirVenta], [trabajo] es una venta rápida ya guardada que se corrige con sus datos escritos.
 class CobrarScreen extends StatefulWidget {
   final String equipoId;
   final VisitaAgenda? trabajo;
   final bool cambiarCobro;
+  final bool corregirVenta;
 
-  const CobrarScreen({super.key, required this.equipoId, this.trabajo, this.cambiarCobro = false});
+  const CobrarScreen({
+    super.key,
+    required this.equipoId,
+    this.trabajo,
+    this.cambiarCobro = false,
+    this.corregirVenta = false,
+  });
 
   @override
   State<CobrarScreen> createState() => _CobrarScreenState();
@@ -26,8 +34,12 @@ class _CobrarScreenState extends State<CobrarScreen> {
   String _monto = '';
   String? _error;
 
-  bool get _rapida => widget.trabajo == null;
-  String? get _pasoTexto => _rapida ? 'Venta rápida · ${_paso.index + 1} de 3' : null;
+  bool get _rapida => widget.trabajo == null || widget.corregirVenta;
+  String? get _pasoTexto =>
+      !_rapida ? null : widget.corregirVenta ? 'Corrigiendo venta · ${_paso.index + 1} de 3' : 'Venta rápida · ${_paso.index + 1} de 3';
+
+  /// Forma de pago ya guardada (se marca al corregir), o null.
+  String? get _metodoGuardado => widget.cambiarCobro || widget.corregirVenta ? widget.trabajo?.metodoPago.toLowerCase() : null;
 
   @override
   void initState() {
@@ -35,8 +47,12 @@ class _CobrarScreenState extends State<CobrarScreen> {
     _paso = _rapida ? _Paso.cliente : _Paso.monto;
     final t = widget.trabajo;
     if (t != null) {
-      final inicial = widget.cambiarCobro ? t.monto : t.montoEstimado;
+      final inicial = widget.cambiarCobro || widget.corregirVenta ? t.monto : t.montoEstimado;
       if (inicial > 0) _monto = inicial.round().toString();
+      if (widget.corregirVenta) {
+        _cliente.text = t.cliente;
+        _queVendio.text = t.notas;
+      }
     }
   }
 
@@ -66,27 +82,35 @@ class _CobrarScreenState extends State<CobrarScreen> {
 
     if (_rapida) {
       final ahora = DateTime.now();
-      final v = VisitaAgenda(
-        id: ahora.millisecondsSinceEpoch.toString(),
-        cliente: _cliente.text.trim(),
-        fecha: fechaKey(ahora),
-        hora: VisitaAgenda.horaDeMinutos(ahora.hour * 60 + ahora.minute),
-        tipo: 'Venta',
-        direccion: '',
-        telefono: '',
-        notas: _queVendio.text.trim(),
-        estado: 'completado',
-        equipoId: widget.equipoId,
-        monto: monto,
-        metodoPago: metodo,
-        duracionMin: 30,
-      );
+      // Al corregir se conserva la misma venta (fecha y hora originales); si no, se crea una nueva.
+      final v = (widget.corregirVenta ? widget.trabajo!.copia() : null) ??
+          VisitaAgenda(
+            id: ahora.millisecondsSinceEpoch.toString(),
+            cliente: '',
+            fecha: fechaKey(ahora),
+            hora: VisitaAgenda.horaDeMinutos(ahora.hour * 60 + ahora.minute),
+            tipo: 'Venta',
+            direccion: '',
+            telefono: '',
+            notas: '',
+            estado: 'completado',
+            equipoId: widget.equipoId,
+            duracionMin: 30,
+          );
+      v
+        ..cliente = _cliente.text.trim()
+        ..notas = _queVendio.text.trim()
+        ..monto = monto
+        ..metodoPago = metodo;
       engine.saveVisitaAgenda(v);
-      _terminar('Venta guardada', 'Venta de ${dinero(monto)} a ${v.cliente}\nen $formaTxt', () => engine.deleteVisitaAgenda(v.id));
+      _terminar(
+        widget.corregirVenta ? 'Venta corregida' : 'Venta guardada',
+        'Venta de ${dinero(monto)} a ${v.cliente}\nen $formaTxt',
+        (ctx) => CobrarScreen(equipoId: v.equipoId, trabajo: v, corregirVenta: true),
+      );
       return;
     }
 
-    final original = widget.trabajo!.copia();
     final actualizado = widget.trabajo!.copia()
       ..estado = 'completado'
       ..monto = monto
@@ -94,14 +118,19 @@ class _CobrarScreenState extends State<CobrarScreen> {
     engine.saveVisitaAgenda(actualizado);
     _terminar(
       widget.cambiarCobro ? 'Cobro cambiado' : 'Cobrado',
-      '${dinero(monto)} en $formaTxt\n${original.cliente}',
-      () => engine.saveVisitaAgenda(original),
+      '${dinero(monto)} en $formaTxt\n${actualizado.cliente}',
+      (ctx) => CobrarScreen(equipoId: actualizado.equipoId, trabajo: actualizado, cambiarCobro: true),
     );
   }
 
-  void _terminar(String titulo, String mensaje, VoidCallback deshacer) {
+  /// Muestra "Guardado" con la opción de corregir: reabre esta pantalla con los datos ya escritos.
+  void _terminar(String titulo, String mensaje, Widget Function(BuildContext) pantallaCorregir) {
     Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => PantallaListo(titulo: titulo, mensaje: mensaje, onDeshacer: deshacer),
+      builder: (_) => PantallaListo(
+        titulo: titulo,
+        mensaje: mensaje,
+        onCorregir: (ctx) => Navigator.of(ctx).pushReplacement(MaterialPageRoute(builder: pantallaCorregir)),
+      ),
     ));
   }
 
@@ -163,7 +192,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
     final t = widget.trabajo;
     final esVenta = _rapida || (t?.esVenta ?? false);
     final titulo = esVenta ? '¿En cuánto se lo vendiste?' : '¿Cuánto te pagó ${t!.cliente.split(' ').first}?';
-    final prellenado = t != null && !widget.cambiarCobro && t.montoEstimado > 0;
+    final prellenado = t != null && !widget.cambiarCobro && !widget.corregirVenta && t.montoEstimado > 0;
     return [
       Encabezado(titulo: titulo, paso: _pasoTexto, onAtras: _atras),
       if (prellenado)
@@ -205,6 +234,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
           vertical: true,
           fontSize: 26,
           alto: 124,
+          seleccionado: _metodoGuardado != null && _metodoGuardado != 'transferencia',
           onTap: () => _guardar('efectivo'),
         ),
         const SizedBox(height: 14),
@@ -214,6 +244,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
           vertical: true,
           fontSize: 26,
           alto: 124,
+          seleccionado: _metodoGuardado == 'transferencia',
           onTap: () => _guardar('transferencia'),
         ),
       ];

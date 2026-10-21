@@ -16,6 +16,9 @@ class AgendarScreen extends StatefulWidget {
   final int? minutoInicial; // minutos desde medianoche
   final ValueChanged<DateTime>? onDiaGuardado;
 
+  /// Para corregir lo recién guardado: abre directo en "¿Está bien así?" con los datos escritos.
+  final bool empezarEnConfirmar;
+
   const AgendarScreen({
     super.key,
     required this.equipoId,
@@ -25,6 +28,7 @@ class AgendarScreen extends StatefulWidget {
     this.diaInicial,
     this.minutoInicial,
     this.onDiaGuardado,
+    this.empezarEnConfirmar = false,
   });
 
   @override
@@ -48,6 +52,9 @@ class _AgendarScreenState extends State<AgendarScreen> {
   String _periodo = 'manana';
   late String _equipo;
   String? _error;
+
+  /// Se tocó un dato en "¿Está bien así?": al terminar ese paso se regresa ahí.
+  bool _corrigiendo = false;
 
   bool get _editando => widget.existente != null;
   bool get _horaYaElegida => widget.minutoInicial != null && !_editando;
@@ -91,7 +98,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
       _duracion = e.duracionMin;
       _equipo = e.equipoId;
     }
-    _paso = _flujo.first;
+    _paso = widget.empezarEnConfirmar ? _Paso.confirmar : _flujo.first;
   }
 
   @override
@@ -112,8 +119,20 @@ class _AgendarScreenState extends State<AgendarScreen> {
       });
 
   void _avanzar() {
+    // Corrigiendo un solo dato: de regreso a "¿Está bien así?" (la hora sí pasa por los minutos).
+    if (_corrigiendo && _paso != _Paso.hora) {
+      _corrigiendo = false;
+      _ir(_Paso.confirmar);
+      return;
+    }
     final i = _flujo.indexOf(_paso);
     if (i >= 0 && i + 1 < _flujo.length) _ir(_flujo[i + 1]);
+  }
+
+  /// Desde "¿Está bien así?": abre solo el paso de ese dato.
+  void _corregir(_Paso p) {
+    _corrigiendo = true;
+    _ir(p);
   }
 
   /// Avanza tras una pausa corta, para que se vea marcado lo que se tocó.
@@ -122,6 +141,20 @@ class _AgendarScreenState extends State<AgendarScreen> {
       });
 
   void _atras() {
+    if (_corrigiendo) {
+      // Sin cambiar ese dato: regresa al resumen (o a los minutos si la hora quedó sin ellos).
+      if (_minuto == null) {
+        _ir(_Paso.minutos);
+      } else {
+        _corrigiendo = false;
+        _ir(_Paso.confirmar);
+      }
+      return;
+    }
+    if (_paso == _Paso.confirmar && widget.empezarEnConfirmar) {
+      Navigator.of(context).pop();
+      return;
+    }
     final i = _flujo.indexOf(_paso);
     if (i <= 0) {
       Navigator.of(context).pop();
@@ -131,6 +164,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
   }
 
   String? _textoPaso(_Paso p) {
+    if (_corrigiendo) return 'Corrigiendo';
     if (widget.soloCambiarFecha) return null;
     if (_editando) return 'Cambiando datos';
     final numerados = _pasosNumerados;
@@ -140,7 +174,6 @@ class _AgendarScreenState extends State<AgendarScreen> {
 
   void _guardar() {
     final engine = context.read<AppEngineService>();
-    final previo = widget.existente?.copia();
     final v = widget.existente?.copia() ??
         VisitaAgenda(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -170,14 +203,15 @@ class _AgendarScreenState extends State<AgendarScreen> {
       builder: (_) => PantallaListo(
         titulo: _editando ? 'Cambios guardados' : 'Agendado',
         mensaje: '${v.cliente}\n${diaTexto(_dia!)}\n${horaTexto(_hora! * 60 + _minuto!)} ${parteDelDia(_hora!)}',
-        onDeshacer: () {
-          if (previo != null) {
-            engine.saveVisitaAgenda(previo);
-            widget.onDiaGuardado?.call(fechaDeKey(previo.fecha));
-          } else {
-            engine.deleteVisitaAgenda(v.id);
-          }
-        },
+        onCorregir: (ctx) => Navigator.of(ctx).pushReplacement(MaterialPageRoute(
+          builder: (_) => AgendarScreen(
+            equipoId: v.equipoId,
+            existente: v,
+            elegirEquipo: widget.elegirEquipo,
+            onDiaGuardado: widget.onDiaGuardado,
+            empezarEnConfirmar: true,
+          ),
+        )),
       ),
     ));
   }
@@ -512,34 +546,84 @@ class _AgendarScreenState extends State<AgendarScreen> {
   }
 
   List<Widget> _pasoConfirmar() {
-    Widget linea(IconData i, String t, {Color color = EC.texto}) => Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(i, size: 22, color: color),
-            const SizedBox(width: 8),
-            Expanded(child: Text(t, style: TextStyle(fontSize: 19, color: color))),
-          ]),
+    // Cada dato es un renglón tocable que abre solo ese paso para corregirlo.
+    Widget dato(IconData icono, String texto, _Paso paso, {bool grande = false, String? detalle}) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _corregir(paso),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 54),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: Row(children: [
+                  Icon(icono, size: grande ? 26 : 22, color: EC.texto),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(texto,
+                          style: TextStyle(
+                            fontSize: grande ? 23 : 19,
+                            fontWeight: grande ? FontWeight.w700 : FontWeight.w400,
+                            color: EC.texto,
+                          )),
+                      if (detalle != null && detalle.isNotEmpty)
+                        Text(detalle, style: const TextStyle(fontSize: 16, color: EC.textoSuave)),
+                    ]),
+                  ),
+                  const Icon(Icons.edit_outlined, size: 22, color: EC.acento),
+                ]),
+              ),
+            ),
+          ),
         );
     final minutos = _hora! * 60 + _minuto!;
     final estimado = double.tryParse(_estimado) ?? 0;
+    final separador = Divider(height: 1, color: EC.borde.withValues(alpha: 0.7));
     return [
-      Encabezado(titulo: '¿Está bien así?', onAtras: _atras),
-      const SizedBox(height: 12),
+      Encabezado(titulo: '¿Está bien así?', paso: _editando ? 'Cambiando datos' : null, onAtras: _atras),
+      const Text('Toca un dato para corregirlo.', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+      const SizedBox(height: 10),
       Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: EC.bordeFuerte)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_cliente.text.trim(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
-            linea(iconoDeTipo(_tipo), '$_tipo${_notas.text.trim().isNotEmpty ? ' · ${_notas.text.trim()}' : ''}'),
-            linea(Icons.calendar_today_outlined, diaTexto(_dia!)),
-            linea(Icons.schedule, '${horaTexto(minutos)} ${parteDelDia(_hora!)}'),
-            linea(Icons.timelapse, _duracion >= 600 ? 'Todo el día' : 'Tarda ${duracionTexto(_duracion)} (hasta las ${horaTexto(minutos + _duracion)})'),
-            linea(Icons.payments_outlined, estimado > 0 ? 'Cobrar aprox. ${dinero(estimado)}' : 'Cobro por definir'),
-            linea(Icons.place_outlined, _direccion.text.trim().isEmpty ? 'Sin dirección' : _direccion.text.trim(), color: EC.textoSuave),
-            if (_telefono.text.trim().isNotEmpty) linea(Icons.phone_outlined, _telefono.text.trim(), color: EC.textoSuave),
-            if (!widget.elegirEquipo) linea(Icons.groups_outlined, nombreEquipo(_equipo), color: EC.textoSuave),
+            dato(Icons.person_outline, _cliente.text.trim(), _Paso.cliente, grande: true, detalle: _telefono.text.trim()),
+            separador,
+            dato(iconoDeTipo(_tipo), _tipo, _Paso.tipo),
+            separador,
+            dato(
+              Icons.place_outlined,
+              _direccion.text.trim().isEmpty ? 'Sin dirección' : _direccion.text.trim(),
+              _Paso.lugar,
+              detalle: _notas.text.trim(),
+            ),
+            separador,
+            dato(Icons.payments_outlined, estimado > 0 ? 'Cobrar aprox. ${dinero(estimado)}' : 'Cobro por definir', _Paso.estimado),
+            separador,
+            dato(Icons.calendar_today_outlined, diaTexto(_dia!), _Paso.dia),
+            separador,
+            dato(Icons.schedule, '${horaTexto(minutos)} ${parteDelDia(_hora!)}', _Paso.hora),
+            separador,
+            dato(
+              Icons.timelapse,
+              _duracion >= 600 ? 'Todo el día' : 'Tarda ${duracionTexto(_duracion)}',
+              _Paso.duracion,
+              detalle: _duracion >= 600 ? null : 'hasta las ${horaTexto(minutos + _duracion)}',
+            ),
+            if (!widget.elegirEquipo) ...[
+              separador,
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(children: [
+                  const Icon(Icons.groups_outlined, size: 22, color: EC.textoSuave),
+                  const SizedBox(width: 10),
+                  Text(nombreEquipo(_equipo), style: const TextStyle(fontSize: 19, color: EC.textoSuave)),
+                ]),
+              ),
+            ],
           ],
         ),
       ),
@@ -575,10 +659,6 @@ class _AgendarScreenState extends State<AgendarScreen> {
         estilo: EstiloBoton.exito,
         onTap: _guardar,
       ),
-      if (!_editando) ...[
-        const SizedBox(height: 10),
-        BotonGrande(texto: 'Cambiar algo', fontSize: 18, alto: 54, onTap: () => _ir(_Paso.cliente)),
-      ],
     ];
   }
 }

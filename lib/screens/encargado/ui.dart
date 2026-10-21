@@ -566,13 +566,17 @@ class _CalendarioMesState extends State<CalendarioMes> {
   }
 }
 
-/// Pantalla de confirmación con palomita y opción de deshacer.
+/// Pantalla de confirmación con palomita. Ofrece corregir lo que se acaba de
+/// guardar (abre los datos ya escritos) o, si no hay forma de corregir, deshacer.
 class PantallaListo extends StatelessWidget {
   final String titulo;
   final String mensaje;
   final VoidCallback? onDeshacer;
 
-  const PantallaListo({super.key, required this.titulo, required this.mensaje, this.onDeshacer});
+  /// Abre de nuevo lo guardado para cambiar datos; recibe el contexto de esta pantalla.
+  final void Function(BuildContext context)? onCorregir;
+
+  const PantallaListo({super.key, required this.titulo, required this.mensaje, this.onDeshacer, this.onCorregir});
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +605,16 @@ class PantallaListo extends StatelessWidget {
                 Text(mensaje, textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, color: EC.textoSuave, height: 1.35)),
                 const SizedBox(height: 32),
                 BotonGrande(texto: 'Listo', estilo: EstiloBoton.primario, onTap: () => Navigator.of(context).pop()),
-                if (onDeshacer != null) ...[
+                if (onCorregir != null) ...[
+                  const SizedBox(height: 12),
+                  BotonGrande(
+                    texto: 'Me equivoqué, corregir',
+                    icono: Icons.edit_outlined,
+                    fontSize: 18,
+                    alto: 56,
+                    onTap: () => onCorregir!(context),
+                  ),
+                ] else if (onDeshacer != null) ...[
                   const SizedBox(height: 12),
                   BotonGrande(
                     texto: 'Me equivoqué, deshacer',

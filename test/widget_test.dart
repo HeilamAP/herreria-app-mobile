@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:portones_movil/models/gasto.dart';
+import 'package:portones_movil/screens/encargado/agendar_screen.dart';
+import 'package:portones_movil/screens/encargado/cobrar_screen.dart';
+import 'package:portones_movil/screens/encargado/gastos_screen.dart';
 import 'package:portones_movil/screens/encargado/horario_dia.dart';
 import 'package:portones_movil/screens/encargado/resumen_screen.dart';
 import 'package:portones_movil/services/auth_service.dart';
@@ -205,6 +209,98 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Semana pasada'), findsOneWidget);
     expect(find.text('Ana Pech'), findsNothing);
+  });
+
+  group('Corregir lo ya guardado actualiza el mismo registro', () {
+    late StorageService storage;
+    late AppEngineService engine;
+
+    Future<void> abrir(WidgetTester tester, Widget pantalla) async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await tester.runAsync(storage.init);
+      engine = AppEngineService(storage: storage);
+      tester.view.physicalSize = const Size(420, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> mostrar(WidgetTester tester, Widget pantalla) => tester.pumpWidget(
+          ChangeNotifierProvider<AppEngineService>.value(value: engine, child: MaterialApp(home: pantalla)),
+        );
+
+    testWidgets('Trabajo: se toca un dato en "¿Está bien así?" y se corrige', (tester) async {
+      await abrir(tester, const SizedBox());
+      final t = VisitaAgenda(
+        id: 't1', cliente: 'Luis Cauih', fecha: fechaKey(hoy()), hora: '10:00', tipo: 'Instalación',
+        direccion: 'Calle 42', telefono: '', notas: '', estado: 'pendiente', equipoId: 'equipo1',
+      );
+      engine.saveVisitaAgenda(t);
+      final total = engine.data.agenda.length; // incluye citas de ejemplo del modo de prueba
+      await mostrar(tester, AgendarScreen(equipoId: 'equipo1', existente: t, empezarEnConfirmar: true));
+
+      expect(find.text('¿Está bien así?'), findsOneWidget);
+      await tester.tap(find.text('Luis Cauih'));
+      await tester.pumpAndSettle();
+      expect(find.text('Corrigiendo'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, 'Luis Cauich');
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Está bien así?'), findsOneWidget); // regresa al resumen, no al paso 2
+      expect(find.text('Luis Cauich'), findsOneWidget);
+      expect(find.text('Calle 42'), findsOneWidget); // lo demás se conserva
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+      expect(find.text('Me equivoqué, corregir'), findsOneWidget);
+      expect(engine.data.agenda.where((a) => a.id == 't1').single.cliente, 'Luis Cauich');
+      expect(engine.data.agenda.length, total); // no se creó otro
+    });
+
+    testWidgets('Venta rápida: se reabre con cliente, monto y forma de pago', (tester) async {
+      await abrir(tester, const SizedBox());
+      final v = VisitaAgenda(
+        id: 'v1', cliente: 'Ana Pech', fecha: fechaKey(hoy()), hora: '12:00', tipo: 'Venta', direccion: '',
+        telefono: '', notas: 'Control', estado: 'completado', equipoId: 'equipo1', monto: 900, metodoPago: 'efectivo',
+      );
+      engine.saveVisitaAgenda(v);
+      final total = engine.data.agenda.length;
+      await mostrar(tester, CobrarScreen(equipoId: 'equipo1', trabajo: v, corregirVenta: true));
+
+      expect(find.text('Corrigiendo venta · 1 de 3'), findsOneWidget);
+      expect(find.text('Ana Pech'), findsWidgets);
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      expect(find.text('\$900'), findsOneWidget);
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Transferencia'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Venta corregida'), findsOneWidget);
+      expect(engine.data.agenda.length, total); // no se creó otra venta
+      final guardada = engine.data.agenda.firstWhere((a) => a.id == 'v1');
+      expect(guardada.metodoPago, 'transferencia');
+      expect(guardada.hora, '12:00');
+    });
+
+    testWidgets('Gasto: abre en el monto con la categoría ya elegida', (tester) async {
+      await abrir(tester, const SizedBox());
+      final g = Gasto(id: 'g1', fecha: fechaKey(hoy()), descripcion: 'Gasolina', categoria: 'Gasolina', monto: 300);
+      engine.addGasto(g);
+      await mostrar(tester, NuevoGastoScreen(equipoId: 'equipo1', existente: g));
+
+      expect(find.text('¿Cuánto gastaste en gasolina?'), findsOneWidget);
+      expect(find.text('\$300'), findsOneWidget);
+      await tester.tap(find.text('0'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar gasto'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Gasto corregido'), findsOneWidget);
+      expect(engine.data.gastos.single.id, 'g1');
+      expect(engine.data.gastos.single.monto, 3000);
+    });
   });
 
   test('La hora se lee en formato nuevo y viejo', () {

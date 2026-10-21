@@ -100,9 +100,12 @@ void borrarGastoConConfirmacion(BuildContext context, Gasto g) {
     ));
 }
 
+/// Anotar un gasto (categoría → monto). Con [existente] se corrige un gasto ya
+/// guardado: abre en el monto con la categoría elegida y guarda encima.
 class NuevoGastoScreen extends StatefulWidget {
   final String equipoId;
-  const NuevoGastoScreen({super.key, required this.equipoId});
+  final Gasto? existente;
+  const NuevoGastoScreen({super.key, required this.equipoId, this.existente});
 
   @override
   State<NuevoGastoScreen> createState() => _NuevoGastoScreenState();
@@ -110,8 +113,19 @@ class NuevoGastoScreen extends StatefulWidget {
 
 class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
   String? _categoria;
+  String? _ultimaCategoria; // se marca al regresar a elegir categoría
   String _monto = '';
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final g = widget.existente;
+    if (g != null) {
+      _categoria = _ultimaCategoria = g.categoria;
+      _monto = g.monto.round().toString();
+    }
+  }
 
   void _atras() {
     if (_categoria == null) {
@@ -130,20 +144,23 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
       return;
     }
     final engine = context.read<AppEngineService>();
+    final previo = widget.existente;
     final g = Gasto(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      fecha: fechaKey(hoy()),
+      id: previo?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      fecha: previo?.fecha ?? fechaKey(hoy()),
       descripcion: _categoria!,
       categoria: _categoria!,
       monto: double.parse(_monto),
-      equipoId: widget.equipoId,
+      equipoId: previo?.equipoId ?? widget.equipoId,
     );
-    engine.addGasto(g);
+    engine.saveGasto(g);
     Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => PantallaListo(
-        titulo: 'Guardado',
+        titulo: previo == null ? 'Guardado' : 'Gasto corregido',
         mensaje: '${dinero(g.monto)} en ${g.categoria.toLowerCase()}',
-        onDeshacer: () => engine.deleteGasto(g.id),
+        onCorregir: (ctx) => Navigator.of(ctx).pushReplacement(MaterialPageRoute(
+          builder: (_) => NuevoGastoScreen(equipoId: g.equipoId, existente: g),
+        )),
       ),
     ));
   }
@@ -162,7 +179,11 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
               padding: const EdgeInsets.all(18),
               children: _categoria == null
                   ? [
-                      Encabezado(titulo: '¿En qué gastaste?', onAtras: _atras),
+                      Encabezado(
+                        titulo: '¿En qué gastaste?',
+                        paso: widget.existente != null ? 'Corrigiendo gasto' : null,
+                        onAtras: _atras,
+                      ),
                       const SizedBox(height: 16),
                       GridView.count(
                         crossAxisCount: 2,
@@ -177,13 +198,21 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
                               texto: c.$1,
                               icono: c.$2,
                               vertical: true,
-                              onTap: () => setState(() => _categoria = c.$1),
+                              seleccionado: _ultimaCategoria == c.$1,
+                              onTap: () => setState(() => _categoria = _ultimaCategoria = c.$1),
                             ),
                         ],
                       ),
                     ]
                   : [
-                      Encabezado(titulo: '¿Cuánto gastaste en ${_categoria!.toLowerCase()}?', onAtras: _atras),
+                      Encabezado(
+                        titulo: '¿Cuánto gastaste en ${_categoria!.toLowerCase()}?',
+                        paso: widget.existente != null ? 'Corrigiendo gasto' : null,
+                        onAtras: _atras,
+                      ),
+                      if (widget.existente != null)
+                        const Text('Para cambiar la categoría, toca la flecha de atrás.',
+                            style: TextStyle(fontSize: 17, color: EC.textoSuave)),
                       const SizedBox(height: 12),
                       TecladoMonto(
                         valor: _monto,
