@@ -410,6 +410,18 @@ class AppEngineService extends ChangeNotifier {
 
   int indexOfVisita(String id) => storage.data.agenda.indexWhere((x) => x.id == id);
 
+  VisitaAgenda? visitaPorId(String id) => storage.data.agenda.where((x) => x.id == id).firstOrNull;
+
+  /// Cambia solo la nota final y/o las fotos de un trabajo (se guarda al momento).
+  void actualizarNotaYFotos(String id, {String? notaFinal, List<String>? fotos}) {
+    final v = visitaPorId(id);
+    if (v == null) return;
+    if (notaFinal != null) v.notaFinal = notaFinal;
+    if (fotos != null) v.fotos = List.of(fotos);
+    storage.saveData();
+    notifyListeners();
+  }
+
   /// Para "deshacer" un borrado: regresa la cita a donde estaba.
   void insertVisitaAt(VisitaAgenda v, int index) {
     final i = index.clamp(0, storage.data.agenda.length);

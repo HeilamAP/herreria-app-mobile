@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:portones_movil/models/gasto.dart';
 import 'package:portones_movil/screens/encargado/agendar_screen.dart';
 import 'package:portones_movil/screens/encargado/cobrar_screen.dart';
 import 'package:portones_movil/screens/encargado/gastos_screen.dart';
+import 'package:portones_movil/screens/encargado/fotos_screen.dart';
 import 'package:portones_movil/screens/encargado/horario_dia.dart';
+import 'package:portones_movil/services/foto_store.dart';
 import 'package:portones_movil/screens/encargado/resumen_screen.dart';
 import 'package:portones_movil/services/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -300,6 +303,117 @@ void main() {
       expect(find.text('Gasto corregido'), findsOneWidget);
       expect(engine.data.gastos.single.id, 'g1');
       expect(engine.data.gastos.single.monto, 3000);
+    });
+  });
+
+  group('Notas y fotos de los trabajos', () {
+    // Imagen PNG de 1x1 píxel, para no depender de la cámara.
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    late StorageService storage;
+    late AppEngineService engine;
+    late FotoStoreMemoria memoria;
+
+    Future<void> preparar(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await tester.runAsync(storage.init);
+      engine = AppEngineService(storage: storage);
+      memoria = FotoStoreMemoria();
+      fotoStore = memoria;
+      tester.view.physicalSize = const Size(420, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> mostrar(WidgetTester tester, Widget pantalla) => tester.pumpWidget(
+          ChangeNotifierProvider<AppEngineService>.value(value: engine, child: MaterialApp(home: pantalla)),
+        );
+
+    VisitaAgenda trabajo({List<String>? fotos, String estado = 'completado'}) => VisitaAgenda(
+          id: 'tf', cliente: 'Carlos Mendoza', fecha: fechaKey(hoy()), hora: '09:00', tipo: 'Instalación',
+          direccion: '', telefono: '', notas: 'Llevar soldadora', estado: estado, equipoId: 'equipo1', monto: 4500,
+          fotos: fotos,
+        );
+
+    test('La nota final y las fotos se guardan y los trabajos viejos no tienen', () {
+      final viejo = VisitaAgenda.fromJson({'id': 'x'});
+      expect(viejo.notaFinal, '');
+      expect(viejo.fotos, isEmpty);
+      final t = VisitaAgenda.fromJson({'id': 'y', 'notaFinal': 'Falta pintar', 'fotos': ['f1', 'f2']});
+      final otra = VisitaAgenda.fromJson(t.toJson());
+      expect(otra.notaFinal, 'Falta pintar');
+      expect(otra.fotos, ['f1', 'f2']);
+      expect(otra.notas, ''); // la nota de cuando se agenda es aparte
+    });
+
+    testWidgets('Se escribe la nota y se quita una foto', (tester) async {
+      await preparar(tester);
+      final id = await tester.runAsync(() => guardarFoto(png));
+      engine.saveVisitaAgenda(trabajo(fotos: [id!]));
+      await mostrar(tester, const FotosNotaScreen(trabajoId: 'tf'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 de 10 fotos'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Falta pintar el riel');
+      await tester.tap(find.byTooltip('Quitar foto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sí, quitar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Todavía no hay fotos'), findsOneWidget);
+      expect(engine.visitaPorId('tf')!.fotos, isEmpty);
+      expect(memoria.fotos, isEmpty); // también se borra del teléfono
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+      expect(engine.visitaPorId('tf')!.notaFinal, 'Falta pintar el riel');
+      expect(engine.visitaPorId('tf')!.notas, 'Llevar soldadora');
+    });
+
+    testWidgets('Al cobrar se pregunta por fotos; al corregir el cobro, no', (tester) async {
+      await preparar(tester);
+      final t = trabajo(estado: 'pendiente');
+      engine.saveVisitaAgenda(t);
+      await mostrar(tester, CobrarScreen(equipoId: 'equipo1', trabajo: t));
+      await tester.pumpAndSettle();
+
+      for (final tecla in ['5', '0', '0']) {
+        await tester.tap(find.text(tecla));
+        await tester.pump();
+      }
+      expect(find.text('\$500'), findsOneWidget);
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Efectivo'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Quieres agregar fotos o una nota?'), findsOneWidget);
+
+      await tester.tap(find.text('Terminar sin nada'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cobrado'), findsOneWidget);
+      expect(engine.visitaPorId('tf')!.monto, 500);
+
+      await tester.tap(find.text('Me equivoqué, corregir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Transferencia'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Quieres agregar fotos o una nota?'), findsNothing);
+      expect(find.text('Cobro cambiado'), findsOneWidget);
+    });
+
+    testWidgets('La tarjeta muestra la nota y las miniaturas', (tester) async {
+      await preparar(tester);
+      final ids = <String>[];
+      for (var i = 0; i < 6; i++) {
+        ids.add((await tester.runAsync(() => guardarFoto(png)))!);
+      }
+      final t = trabajo(fotos: ids)..notaFinal = 'Quedó bien';
+      await mostrar(tester, Scaffold(body: NotasYFotosResumen(trabajo: t, onAbrir: () {})));
+      await tester.pumpAndSettle();
+      expect(find.text('Quedó bien'), findsOneWidget);
+      expect(find.byType(FotoMiniatura), findsNWidgets(3));
+      expect(find.text('+3'), findsOneWidget);
     });
   });
 

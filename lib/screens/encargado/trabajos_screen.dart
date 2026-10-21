@@ -6,6 +6,7 @@ import '../../services/app_engine_service.dart';
 import '../../services/auth_service.dart';
 import 'agendar_screen.dart';
 import 'cobrar_screen.dart';
+import 'fotos_screen.dart';
 import 'horario_dia.dart';
 import 'ui.dart';
 
@@ -225,6 +226,10 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
             builder: (_) => OpcionesTrabajoScreen(trabajo: t, elegirEquipo: true, onDiaGuardado: _irADia),
           ));
         },
+        onFotos: () {
+          antes?.call();
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => FotosNotaScreen(trabajoId: t.id)));
+        },
       );
 
   /// Al tocar un trabajo en el horario: su tarjeta completa en una hoja desde abajo.
@@ -302,6 +307,7 @@ class _TarjetaTrabajo extends StatelessWidget {
   final String? equipoPropio;
   final VoidCallback onCobrar;
   final VoidCallback onOpciones;
+  final VoidCallback onFotos;
 
   const _TarjetaTrabajo({
     required this.trabajo,
@@ -309,6 +315,7 @@ class _TarjetaTrabajo extends StatelessWidget {
     required this.equipoPropio,
     required this.onCobrar,
     required this.onOpciones,
+    required this.onFotos,
   });
 
   /// Etiqueta con el equipo que hace el trabajo; resalta el equipo del encargado.
@@ -374,6 +381,18 @@ class _TarjetaTrabajo extends StatelessWidget {
               style: const TextStyle(fontSize: 18, color: EC.exitoTexto, height: 1.35),
             ),
             const SizedBox(height: 10),
+            if (t.notaFinal.isNotEmpty || t.fotos.isNotEmpty)
+              NotasYFotosResumen(trabajo: t, onAbrir: onFotos)
+            else
+              BotonGrande(
+                texto: 'Agregar fotos o nota',
+                icono: Icons.add_a_photo_outlined,
+                fontSize: 17,
+                alto: 50,
+                estilo: EstiloBoton.acentoSuave,
+                onTap: onFotos,
+              ),
+            const SizedBox(height: 8),
             BotonGrande(texto: 'Cambiar o borrar', icono: Icons.edit_outlined, fontSize: 17, alto: 50, onTap: onOpciones),
           ],
         ),
@@ -482,8 +501,20 @@ class _TarjetaTrabajo extends StatelessWidget {
               onTap: onCobrar,
             ),
           ],
+          if (t.notaFinal.isNotEmpty || t.fotos.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            NotasYFotosResumen(trabajo: t, onAbrir: onFotos),
+          ],
           const SizedBox(height: 10),
-          BotonGrande(texto: 'Cambiar o borrar', icono: Icons.edit_outlined, fontSize: 17, alto: 52, onTap: onOpciones),
+          Row(children: [
+            Expanded(
+              child: BotonGrande(texto: 'Fotos y nota', icono: Icons.add_a_photo_outlined, vertical: true, fontSize: 17, alto: 68, onTap: onFotos),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: BotonGrande(texto: 'Cambiar o borrar', icono: Icons.edit_outlined, vertical: true, fontSize: 17, alto: 68, onTap: onOpciones),
+            ),
+          ]),
         ],
       ),
     );

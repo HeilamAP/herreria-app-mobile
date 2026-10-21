@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/visita_agenda.dart';
 import '../../services/app_engine_service.dart';
+import 'fotos_screen.dart';
 import 'ui.dart';
 
 /// Cobrar un trabajo (monto → forma de pago) o registrar una venta rápida
@@ -106,7 +107,9 @@ class _CobrarScreenState extends State<CobrarScreen> {
       _terminar(
         widget.corregirVenta ? 'Venta corregida' : 'Venta guardada',
         'Venta de ${dinero(monto)} a ${v.cliente}\nen $formaTxt',
-        (ctx) => CobrarScreen(equipoId: v.equipoId, trabajo: v, corregirVenta: true),
+        v,
+        (actual) => CobrarScreen(equipoId: actual.equipoId, trabajo: actual, corregirVenta: true),
+        ofrecerFotos: !widget.corregirVenta,
       );
       return;
     }
@@ -119,19 +122,40 @@ class _CobrarScreenState extends State<CobrarScreen> {
     _terminar(
       widget.cambiarCobro ? 'Cobro cambiado' : 'Cobrado',
       '${dinero(monto)} en $formaTxt\n${actualizado.cliente}',
-      (ctx) => CobrarScreen(equipoId: actualizado.equipoId, trabajo: actualizado, cambiarCobro: true),
+      actualizado,
+      (actual) => CobrarScreen(equipoId: actual.equipoId, trabajo: actual, cambiarCobro: true),
+      ofrecerFotos: !widget.cambiarCobro,
     );
   }
 
-  /// Muestra "Guardado" con la opción de corregir: reabre esta pantalla con los datos ya escritos.
-  void _terminar(String titulo, String mensaje, Widget Function(BuildContext) pantallaCorregir) {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => PantallaListo(
-        titulo: titulo,
-        mensaje: mensaje,
-        onCorregir: (ctx) => Navigator.of(ctx).pushReplacement(MaterialPageRoute(builder: pantallaCorregir)),
-      ),
-    ));
+  /// Muestra "Guardado" con la opción de corregir (reabre esta pantalla con los datos ya escritos).
+  /// Al cobrar por primera vez, antes pregunta si quieren agregar fotos o una nota.
+  void _terminar(
+    String titulo,
+    String mensaje,
+    VisitaAgenda guardado,
+    Widget Function(VisitaAgenda actual) pantallaCorregir, {
+    required bool ofrecerFotos,
+  }) {
+    final engine = context.read<AppEngineService>();
+    void mostrarListo(BuildContext ctx) => Navigator.of(ctx).pushReplacement(MaterialPageRoute(
+          builder: (_) => PantallaListo(
+            titulo: titulo,
+            mensaje: mensaje,
+            // Se corrige la versión más reciente (puede ya tener fotos o nota).
+            onCorregir: (ctx2) => Navigator.of(ctx2).pushReplacement(MaterialPageRoute(
+              builder: (_) => pantallaCorregir(engine.visitaPorId(guardado.id) ?? guardado),
+            )),
+          ),
+        ));
+
+    if (ofrecerFotos) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => PreguntaFotosScreen(trabajoId: guardado.id, onTerminar: mostrarListo),
+      ));
+    } else {
+      mostrarListo(context);
+    }
   }
 
   @override

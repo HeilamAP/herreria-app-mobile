@@ -205,6 +205,13 @@ class _HorarioDiaState extends State<HorarioDia> {
               TextSpan(children: [
                 if (t.completado) const WidgetSpan(child: Padding(padding: EdgeInsets.only(right: 3), child: Icon(Icons.check_circle, size: 15, color: EC.exitoTexto))),
                 TextSpan(text: '${horaTexto(t.minutosDelDia)} ', style: const TextStyle(fontWeight: FontWeight.w800)),
+                if (t.fotos.isNotEmpty) ...[
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Icon(Icons.photo_camera_outlined, size: 15, color: texto),
+                  ),
+                  TextSpan(text: '${t.fotos.length} '),
+                ],
                 if (corto) TextSpan(text: t.cliente),
               ]),
               maxLines: 1,
