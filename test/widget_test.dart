@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:portones_movil/screens/encargado/horario_dia.dart';
+import 'package:portones_movil/screens/encargado/resumen_screen.dart';
+import 'package:portones_movil/services/auth_service.dart';
+import 'package:provider/provider.dart';
 import 'package:portones_movil/screens/encargado/ui.dart';
 import 'package:portones_movil/main.dart';
 import 'package:portones_movil/models/visita_agenda.dart';
@@ -109,6 +112,41 @@ void main() {
     expect(engine.cobrosDelDia('equipo1', '2030-01-07', 'efectivo').map((t) => t.id), ['efe_manana', 'efe_tarde']);
     expect(engine.cobrosDelDia('equipo1', '2030-01-07', 'transferencia').map((t) => t.id), ['trans']);
     expect(engine.cobrosDelDia('equipo2', '2030-01-07', 'efectivo'), isEmpty);
+  });
+
+  testWidgets('El Resumen despliega el detalle debajo del renglón tocado', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    engine.saveVisitaAgenda(VisitaAgenda(
+      id: 'v1', cliente: 'Ana Pech', fecha: fechaKey(hoy()), hora: '10:00', tipo: 'Venta', direccion: '',
+      telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: 900, metodoPago: 'efectivo',
+    ));
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: Scaffold(body: ResumenEquipoScreen())),
+    ));
+
+    expect(find.text('Ana Pech'), findsNothing);
+    await tester.tap(find.text('Efectivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana Pech'), findsOneWidget);
+    expect(find.text('Toca un cobro para cambiarlo o borrarlo.'), findsOneWidget);
+
+    await tester.tap(find.text('Transferencia'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hoy no hay cobros por transferencia'), findsOneWidget);
+
+    await tester.tap(find.text('Efectivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana Pech'), findsNothing);
   });
 
   test('La hora se lee en formato nuevo y viejo', () {
