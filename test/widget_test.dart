@@ -149,7 +149,18 @@ void main() {
     expect(find.text('Ana Pech'), findsNothing);
   });
 
-  testWidgets('El Resumen de la semana suma y agrupa los días de lunes a domingo', (tester) async {
+  test('La semana del Resumen va de domingo a sábado', () {
+    // El 20 de octubre de 2026 es martes: su semana es del domingo 18 al sábado 24.
+    expect(domingoDe(DateTime(2026, 10, 20)), DateTime(2026, 10, 18));
+    expect(domingoDe(DateTime(2026, 10, 18)), DateTime(2026, 10, 18)); // domingo
+    expect(domingoDe(DateTime(2026, 10, 24)), DateTime(2026, 10, 18)); // sábado
+    expect(domingoDe(DateTime(2026, 10, 25)), DateTime(2026, 10, 25)); // siguiente domingo
+    expect(semanaTexto(DateTime(2026, 10, 18)), 'Del 18 al 24 de octubre');
+    expect(semanaTexto(DateTime(2026, 10, 25)), 'Del 25 al 31 de octubre');
+    expect(semanaTexto(DateTime(2026, 11, 29)), 'Del 29 de noviembre al 5 de diciembre');
+  });
+
+  testWidgets('El Resumen de la semana suma y agrupa los días de domingo a sábado', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
     await tester.runAsync(storage.init);
@@ -157,7 +168,7 @@ void main() {
     final engine = AppEngineService(storage: storage);
     auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
     // Otro día de esta semana que no sea hoy.
-    final otroDia = hoy().weekday == DateTime.monday ? hoy().add(const Duration(days: 1)) : lunesDe(hoy());
+    final otroDia = hoy().weekday == DateTime.sunday ? hoy().add(const Duration(days: 1)) : domingoDe(hoy());
     VisitaAgenda cobro(String id, String cliente, DateTime dia, double monto) => VisitaAgenda(
           id: id, cliente: cliente, fecha: fechaKey(dia), hora: '10:00', tipo: 'Instalación', direccion: '',
           telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: monto, metodoPago: 'efectivo',

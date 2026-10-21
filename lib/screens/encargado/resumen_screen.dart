@@ -8,7 +8,7 @@ import 'ui.dart';
 
 enum DetalleResumen { efectivo, transferencia, gastos }
 
-/// Resumen del equipo, de hoy o de una semana (lunes a domingo). Cada renglón
+/// Resumen del equipo, de hoy o de una semana (domingo a sábado). Cada renglón
 /// (Efectivo, Transferencia, Gastos) se despliega debajo de sí mismo con su detalle.
 class ResumenEquipoScreen extends StatefulWidget {
   const ResumenEquipoScreen({super.key});
@@ -20,15 +20,15 @@ class ResumenEquipoScreen extends StatefulWidget {
 class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
   final _abiertos = <DetalleResumen>{};
   bool _semana = false;
-  DateTime _lunes = lunesDe(hoy());
+  DateTime _inicio = domingoDe(hoy());
 
-  bool get _esEstaSemana => _lunes == lunesDe(hoy());
+  bool get _esEstaSemana => _inicio == domingoDe(hoy());
 
   /// "hoy", "esta semana" o "esa semana", para los textos.
   String get _cuando => !_semana ? 'hoy' : _esEstaSemana ? 'esta semana' : 'esa semana';
 
-  String get _desde => _semana ? fechaKey(_lunes) : fechaKey(hoy());
-  String get _hasta => _semana ? fechaKey(_lunes.add(const Duration(days: 6))) : fechaKey(hoy());
+  String get _desde => _semana ? fechaKey(_inicio) : fechaKey(hoy());
+  String get _hasta => _semana ? fechaKey(_inicio.add(const Duration(days: 6))) : fechaKey(hoy());
 
   void _alternar(DetalleResumen d) => setState(() => _abiertos.contains(d) ? _abiertos.remove(d) : _abiertos.add(d));
 
@@ -50,14 +50,14 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
         if (_semana) ...[
           const SizedBox(height: 10),
           SelectorConFlechas(
-            texto: semanaTexto(_lunes),
-            onAnterior: () => setState(() => _lunes = _lunes.subtract(const Duration(days: 7))),
-            onSiguiente: _esEstaSemana ? null : () => setState(() => _lunes = _lunes.add(const Duration(days: 7))),
+            texto: semanaTexto(_inicio),
+            onAnterior: () => setState(() => _inicio = _inicio.subtract(const Duration(days: 7))),
+            onSiguiente: _esEstaSemana ? null : () => setState(() => _inicio = _inicio.add(const Duration(days: 7))),
           ),
           if (!_esEstaSemana)
             Center(
               child: TextButton(
-                onPressed: () => setState(() => _lunes = lunesDe(hoy())),
+                onPressed: () => setState(() => _inicio = domingoDe(hoy())),
                 child: const Text('Volver a esta semana', style: TextStyle(fontSize: 17)),
               ),
             ),
@@ -100,7 +100,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
             borderRadius: BorderRadius.circular(12),
             onTap: () => setState(() {
               _semana = semana;
-              if (semana) _lunes = lunesDe(hoy());
+              if (semana) _inicio = domingoDe(hoy());
             }),
             child: SizedBox(
               height: 54,

@@ -65,12 +65,16 @@ String diaTexto(DateTime d) {
 /// Lunes de la semana de [d]; la nómina se guarda con esta fecha.
 DateTime lunesDe(DateTime d) => soloDia(d).subtract(Duration(days: d.weekday - 1));
 
-String semanaTexto(DateTime lunes) {
-  final domingo = lunes.add(const Duration(days: 6));
-  final mesFin = meses[domingo.month - 1];
-  return lunes.month == domingo.month
-      ? 'Del ${lunes.day} al ${domingo.day} de $mesFin'
-      : 'Del ${lunes.day} de ${meses[lunes.month - 1]} al ${domingo.day} de $mesFin';
+/// Domingo con el que empieza la semana de [d] (el Resumen va de domingo a sábado).
+DateTime domingoDe(DateTime d) => soloDia(d).subtract(Duration(days: d.weekday % 7));
+
+/// "Del 18 al 24 de octubre" para una semana de 7 días que empieza en [inicio].
+String semanaTexto(DateTime inicio) {
+  final fin = inicio.add(const Duration(days: 6));
+  final mesFin = meses[fin.month - 1];
+  return inicio.month == fin.month
+      ? 'Del ${inicio.day} al ${fin.day} de $mesFin'
+      : 'Del ${inicio.day} de ${meses[inicio.month - 1]} al ${fin.day} de $mesFin';
 }
 
 String horaTexto(int minutos) {
