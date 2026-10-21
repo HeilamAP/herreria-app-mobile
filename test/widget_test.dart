@@ -417,6 +417,49 @@ void main() {
     });
   });
 
+  testWidgets('Un gasto registrado se puede corregir desde la pestaña Gastos', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    engine.addGasto(Gasto(id: 'g1', fecha: fechaKey(hoy()), descripcion: 'Gasolina', categoria: 'Gasolina', monto: 300));
+    tester.view.physicalSize = const Size(420, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: Scaffold(body: GastosEquipoScreen())),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Gasolina'));
+    await tester.pumpAndSettle();
+    expect(find.text('Corregir este gasto'), findsOneWidget);
+    expect(find.text('Borrar este gasto'), findsOneWidget);
+
+    await tester.tap(find.text('Corregir este gasto'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Cuánto gastaste en gasolina?'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.backspace_outlined));
+    await tester.pump();
+    expect(find.text('\$30'), findsOneWidget); // el monto guardado viene escrito: 300 → borrar un dígito → 30
+    await tester.tap(find.text('5'));
+    await tester.pump();
+    expect(find.text('\$305'), findsOneWidget);
+    await tester.tap(find.text('Guardar gasto'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gasto corregido'), findsOneWidget);
+    expect(engine.data.gastos.single.id, 'g1');
+    expect(engine.data.gastos.single.monto, 305);
+  });
+
   test('La hora se lee en formato nuevo y viejo', () {
     expect(VisitaAgenda.minutosDeHora('14:30'), 14 * 60 + 30);
     expect(VisitaAgenda.minutosDeHora('02:30 PM'), 14 * 60 + 30);

@@ -202,7 +202,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
           abajo: g.descripcion.isNotEmpty && g.descripcion != g.categoria ? g.categoria : '',
           monto: '−${dinero(g.monto)}',
           color: EC.peligroTexto,
-          onTap: () => borrarGastoConConfirmacion(context, g),
+          onTap: () => abrirOpcionesGasto(context, g),
         ));
       }
     } else {
@@ -246,7 +246,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
               child: Text(
-                esGastos ? 'Toca un gasto si quieres borrarlo.' : 'Toca un cobro para cambiarlo o borrarlo.',
+                esGastos ? 'Toca un gasto para corregirlo o borrarlo.' : 'Toca un cobro para cambiarlo o borrarlo.',
                 style: const TextStyle(fontSize: 15, color: EC.textoSuave),
               ),
             ),

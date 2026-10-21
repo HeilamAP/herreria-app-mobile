@@ -52,7 +52,7 @@ class GastosEquipoScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EC.bordeFuerte)),
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => borrarGastoConConfirmacion(context, g),
+              onTap: () => abrirOpcionesGasto(context, g),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(children: [
@@ -70,12 +70,66 @@ class GastosEquipoScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text('Total: ${dinero(total)}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: EC.texto)),
           const SizedBox(height: 6),
-          const Text('Toca un gasto si quieres borrarlo.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+          const Text('Toca un gasto para corregirlo o borrarlo.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
         ],
       ],
     );
   }
 
+}
+
+/// Al tocar un gasto ya registrado: corregirlo (con sus datos escritos) o borrarlo.
+void abrirOpcionesGasto(BuildContext context, Gasto g) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: EC.fondo,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => EncargadoPage(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 12),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Icon(iconoDeCategoria(g.categoria), size: 30, color: EC.textoSuave),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(g.descripcion.isNotEmpty ? g.descripcion : g.categoria,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: EC.texto)),
+              ),
+              Text(dinero(g.monto), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: EC.peligroTexto)),
+            ]),
+            Text(diaTexto(fechaDeKey(g.fecha)), style: const TextStyle(fontSize: 17, color: EC.textoSuave)),
+            const SizedBox(height: 18),
+            BotonGrande(
+              texto: 'Corregir este gasto',
+              icono: Icons.edit_outlined,
+              alto: 64,
+              estilo: EstiloBoton.acentoSuave,
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => NuevoGastoScreen(equipoId: g.equipoId, existente: g),
+                ));
+              },
+            ),
+            const SizedBox(height: 10),
+            BotonGrande(
+              texto: 'Borrar este gasto',
+              icono: Icons.delete_outline,
+              alto: 64,
+              estilo: EstiloBoton.peligroSuave,
+              onTap: () {
+                Navigator.of(ctx).pop();
+                borrarGastoConConfirmacion(context, g);
+              },
+            ),
+            const SizedBox(height: 10),
+            BotonGrande(texto: 'Cerrar', fontSize: 18, alto: 52, onTap: () => Navigator.of(ctx).pop()),
+          ]),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Pregunta si se borra el gasto y deja "deshacer" en la pantalla de confirmación.
