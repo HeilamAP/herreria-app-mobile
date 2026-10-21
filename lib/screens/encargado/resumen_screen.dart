@@ -8,8 +8,8 @@ import 'ui.dart';
 
 enum DetalleResumen { efectivo, transferencia, gastos }
 
-/// Resumen de hoy. Cada renglón (Efectivo, Transferencia, Gastos) se despliega
-/// debajo de sí mismo para mostrar su detalle.
+/// Resumen del equipo, de hoy o de una semana (lunes a domingo). Cada renglón
+/// (Efectivo, Transferencia, Gastos) se despliega debajo de sí mismo con su detalle.
 class ResumenEquipoScreen extends StatefulWidget {
   const ResumenEquipoScreen({super.key});
 
@@ -19,6 +19,16 @@ class ResumenEquipoScreen extends StatefulWidget {
 
 class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
   final _abiertos = <DetalleResumen>{};
+  bool _semana = false;
+  DateTime _lunes = lunesDe(hoy());
+
+  bool get _esEstaSemana => _lunes == lunesDe(hoy());
+
+  /// "hoy", "esta semana" o "esa semana", para los textos.
+  String get _cuando => !_semana ? 'hoy' : _esEstaSemana ? 'esta semana' : 'esa semana';
+
+  String get _desde => _semana ? fechaKey(_lunes) : fechaKey(hoy());
+  String get _hasta => _semana ? fechaKey(_lunes.add(const Duration(days: 6))) : fechaKey(hoy());
 
   void _alternar(DetalleResumen d) => setState(() => _abiertos.contains(d) ? _abiertos.remove(d) : _abiertos.add(d));
 
@@ -26,18 +36,36 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
   Widget build(BuildContext context) {
     final engine = context.watch<AppEngineService>();
     final equipo = context.read<AuthService>().currentUser?.equipoId ?? 'equipo1';
-    final dia = fechaKey(hoy());
-    final r = engine.resumen(equipo, dia, dia);
+    final r = engine.resumen(equipo, _desde, _hasta);
+    final cuando = _cuando;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        const Text('Resumen de hoy', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
-        Text(diaTexto(hoy()), style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
-        const SizedBox(height: 16),
-        _seccion(DetalleResumen.efectivo, Icons.payments_outlined, 'Efectivo', dinero(r.efectivo), equipo, dia),
-        _seccion(DetalleResumen.transferencia, Icons.account_balance_outlined, 'Transferencia', dinero(r.transferencia), equipo, dia),
-        _seccion(DetalleResumen.gastos, Icons.receipt_long_outlined, 'Gastos', r.gastos > 0 ? '−${dinero(r.gastos)}' : dinero(0), equipo, dia,
+        Text(_semana ? 'Resumen de la semana' : 'Resumen de hoy',
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: EC.texto)),
+        if (!_semana) Text(diaTexto(hoy()), style: const TextStyle(fontSize: 18, color: EC.textoSuave)),
+        const SizedBox(height: 12),
+        _selectorPeriodo(),
+        if (_semana) ...[
+          const SizedBox(height: 10),
+          SelectorConFlechas(
+            texto: semanaTexto(_lunes),
+            onAnterior: () => setState(() => _lunes = _lunes.subtract(const Duration(days: 7))),
+            onSiguiente: _esEstaSemana ? null : () => setState(() => _lunes = _lunes.add(const Duration(days: 7))),
+          ),
+          if (!_esEstaSemana)
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _lunes = lunesDe(hoy())),
+                child: const Text('Volver a esta semana', style: TextStyle(fontSize: 17)),
+              ),
+            ),
+        ],
+        const SizedBox(height: 14),
+        _seccion(DetalleResumen.efectivo, Icons.payments_outlined, 'Efectivo', dinero(r.efectivo), equipo),
+        _seccion(DetalleResumen.transferencia, Icons.account_balance_outlined, 'Transferencia', dinero(r.transferencia), equipo),
+        _seccion(DetalleResumen.gastos, Icons.receipt_long_outlined, 'Gastos', r.gastos > 0 ? '−${dinero(r.gastos)}' : dinero(0), equipo,
             color: EC.peligroTexto),
         const Text('Toca un renglón para ver el detalle.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
         const SizedBox(height: 14),
@@ -45,7 +73,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Lo que quedó hoy', style: TextStyle(fontSize: 20, color: EC.textoSuave)),
+            Text('Lo que quedó $cuando', style: const TextStyle(fontSize: 20, color: EC.textoSuave)),
             Text(dinero(r.efectivo + r.transferencia - r.gastos),
                 style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: EC.texto)),
           ]),
@@ -58,8 +86,48 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     );
   }
 
-  Widget _seccion(DetalleResumen detalle, IconData icono, String texto, String valor, String equipo, String dia,
-      {Color color = EC.texto}) {
+  Widget _selectorPeriodo() {
+    Widget opcion(bool semana, String texto, IconData icono) {
+      final activa = _semana == semana;
+      return Expanded(
+        child: Material(
+          color: activa ? EC.fondo : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: activa ? EC.bordeFuerte : Colors.transparent),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() {
+              _semana = semana;
+              if (semana) _lunes = lunesDe(hoy());
+            }),
+            child: SizedBox(
+              height: 54,
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(icono, size: 22, color: activa ? EC.texto : EC.textoSuave),
+                const SizedBox(width: 8),
+                Text(texto,
+                    style: TextStyle(fontSize: 19, fontWeight: activa ? FontWeight.w700 : FontWeight.w400, color: activa ? EC.texto : EC.textoSuave)),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
+      child: Row(children: [
+        opcion(false, 'Hoy', Icons.today_outlined),
+        const SizedBox(width: 4),
+        opcion(true, 'Semana', Icons.date_range_outlined),
+      ]),
+    );
+  }
+
+  Widget _seccion(DetalleResumen detalle, IconData icono, String texto, String valor, String equipo, {Color color = EC.texto}) {
     final abierto = _abiertos.contains(detalle);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -94,7 +162,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               alignment: Alignment.topCenter,
-              child: abierto ? _detalle(detalle, equipo, dia) : const SizedBox(width: double.infinity),
+              child: abierto ? _detalle(detalle, equipo) : const SizedBox(width: double.infinity),
             ),
           ],
         ),
@@ -102,14 +170,32 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     );
   }
 
-  /// Lista que se despliega debajo del renglón: los cobros o los gastos del día.
-  Widget _detalle(DetalleResumen detalle, String equipo, String dia) {
+  /// Lista que se despliega debajo del renglón. En la vista de semana se agrupa por día.
+  Widget _detalle(DetalleResumen detalle, String equipo) {
     final engine = context.read<AppEngineService>();
     final esGastos = detalle == DetalleResumen.gastos;
     final filas = <Widget>[];
+    String? diaAnterior;
+
+    void encabezadoDia(String fecha, double totalDia) {
+      if (!_semana || fecha == diaAnterior) return;
+      diaAnterior = fecha;
+      filas.add(Padding(
+        padding: EdgeInsets.fromLTRB(4, filas.isEmpty ? 2 : 10, 4, 6),
+        child: Row(children: [
+          Expanded(
+            child: Text(_nombreDia(fecha), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: EC.texto)),
+          ),
+          Text(esGastos ? '−${dinero(totalDia)}' : dinero(totalDia),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: esGastos ? EC.peligroTexto : EC.textoSuave)),
+        ]),
+      ));
+    }
 
     if (esGastos) {
-      for (final g in engine.gastosDelDia(equipo, dia)) {
+      final gastos = engine.gastosEntre(equipo, _desde, _hasta);
+      for (final g in gastos) {
+        encabezadoDia(g.fecha, gastos.where((x) => x.fecha == g.fecha).fold<double>(0, (s, x) => s + x.monto));
         filas.add(_fila(
           icono: iconoDeCategoria(g.categoria),
           arriba: g.descripcion.isNotEmpty ? g.descripcion : g.categoria,
@@ -120,7 +206,9 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
         ));
       }
     } else {
-      for (final t in engine.cobrosDelDia(equipo, dia, detalle.name)) {
+      final cobros = engine.cobrosEntre(equipo, _desde, _hasta, detalle.name);
+      for (final t in cobros) {
+        encabezadoDia(t.fecha, cobros.where((x) => x.fecha == t.fecha).fold<double>(0, (s, x) => s + x.monto));
         filas.add(_fila(
           icono: iconoDeTipo(t.tipo),
           arriba: t.cliente,
@@ -134,6 +222,7 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
       }
     }
 
+    final cuando = _cuando;
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(color: EC.superficie, border: Border(top: BorderSide(color: EC.borde))),
@@ -146,8 +235,8 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 esGastos
-                    ? 'Hoy no has anotado gastos'
-                    : 'Hoy no hay cobros ${detalle == DetalleResumen.efectivo ? 'en efectivo' : 'por transferencia'}',
+                    ? 'No hay gastos $cuando'
+                    : 'No hay cobros ${detalle == DetalleResumen.efectivo ? 'en efectivo' : 'por transferencia'} $cuando',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 18, color: EC.textoSuave),
               ),
@@ -165,6 +254,14 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
         ],
       ),
     );
+  }
+
+  String _nombreDia(String fecha) {
+    final d = fechaDeKey(fecha);
+    final dif = diasEntre(hoy(), d);
+    final nombre = '${diasLargos[d.weekday - 1]} ${d.day}';
+    final capital = '${nombre[0].toUpperCase()}${nombre.substring(1)}';
+    return dif == 0 ? 'Hoy, $nombre' : dif == -1 ? 'Ayer, $nombre' : capital;
   }
 
   Widget _fila({

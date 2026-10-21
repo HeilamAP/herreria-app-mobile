@@ -419,15 +419,25 @@ class AppEngineService extends ChangeNotifier {
   }
 
   /// Trabajos y ventas cobrados en una fecha con cierta forma de pago ('efectivo' | 'transferencia').
-  List<VisitaAgenda> cobrosDelDia(String equipoId, String fecha, String metodo) {
+  List<VisitaAgenda> cobrosDelDia(String equipoId, String fecha, String metodo) => cobrosEntre(equipoId, fecha, fecha, metodo);
+
+  /// Cobros entre dos fechas (yyyy-MM-dd, ambas incluidas), ordenados por día y hora.
+  List<VisitaAgenda> cobrosEntre(String equipoId, String desde, String hasta, String metodo) {
     final list = getAgendaFiltered(equipoId).where((a) {
-      if (!a.completado || a.fecha != fecha) return false;
+      if (!a.completado || a.fecha.compareTo(desde) < 0 || a.fecha.compareTo(hasta) > 0) return false;
       final esTransferencia = a.metodoPago.toLowerCase() == 'transferencia';
       return metodo == 'transferencia' ? esTransferencia : !esTransferencia;
     }).toList();
-    list.sort((a, b) => a.minutosDelDia.compareTo(b.minutosDelDia));
+    list.sort((a, b) {
+      final f = a.fecha.compareTo(b.fecha);
+      return f != 0 ? f : a.minutosDelDia.compareTo(b.minutosDelDia);
+    });
     return list;
   }
+
+  List<Gasto> gastosEntre(String equipoId, String desde, String hasta) =>
+      getGastosFiltered(equipoId).where((g) => g.fecha.compareTo(desde) >= 0 && g.fecha.compareTo(hasta) <= 0).toList()
+        ..sort((a, b) => a.fecha.compareTo(b.fecha));
 
   List<Gasto> gastosDelDia(String equipoId, String fecha) =>
       getGastosFiltered(equipoId).where((g) => g.fecha == fecha).toList();

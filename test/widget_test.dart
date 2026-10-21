@@ -142,10 +142,57 @@ void main() {
 
     await tester.tap(find.text('Transferencia'));
     await tester.pumpAndSettle();
-    expect(find.text('Hoy no hay cobros por transferencia'), findsOneWidget);
+    expect(find.text('No hay cobros por transferencia hoy'), findsOneWidget);
 
     await tester.tap(find.text('Efectivo'));
     await tester.pumpAndSettle();
+    expect(find.text('Ana Pech'), findsNothing);
+  });
+
+  testWidgets('El Resumen de la semana suma y agrupa los días de lunes a domingo', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    // Otro día de esta semana que no sea hoy.
+    final otroDia = hoy().weekday == DateTime.monday ? hoy().add(const Duration(days: 1)) : lunesDe(hoy());
+    VisitaAgenda cobro(String id, String cliente, DateTime dia, double monto) => VisitaAgenda(
+          id: id, cliente: cliente, fecha: fechaKey(dia), hora: '10:00', tipo: 'Instalación', direccion: '',
+          telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: monto, metodoPago: 'efectivo',
+        );
+    engine.saveVisitaAgenda(cobro('hoy', 'Ana Pech', hoy(), 900));
+    engine.saveVisitaAgenda(cobro('otro', 'Luis Cauich', otroDia, 1500));
+    engine.saveVisitaAgenda(cobro('pasada', 'Semana pasada', hoy().subtract(const Duration(days: 7)), 5000));
+
+    tester.view.physicalSize = const Size(420, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: Scaffold(body: ResumenEquipoScreen())),
+    ));
+
+    expect(find.text('\$900'), findsWidgets); // hoy solo cuenta la de hoy
+    await tester.tap(find.text('Semana'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resumen de la semana'), findsOneWidget);
+    expect(find.text('\$2,400'), findsWidgets); // 900 + 1500, sin la semana pasada
+
+    await tester.tap(find.text('Efectivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana Pech'), findsOneWidget);
+    expect(find.text('Luis Cauich'), findsOneWidget);
+    expect(find.text('Semana pasada'), findsNothing);
+    expect(find.textContaining('Hoy, '), findsOneWidget); // encabezado del día
+
+    await tester.tap(find.byTooltip('Anterior'));
+    await tester.pumpAndSettle();
+    expect(find.text('Semana pasada'), findsOneWidget);
     expect(find.text('Ana Pech'), findsNothing);
   });
 
