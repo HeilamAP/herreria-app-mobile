@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
 import 'gastos_screen.dart';
 import 'resumen_screen.dart';
 import 'trabajos_screen.dart';
@@ -16,6 +17,25 @@ class EncargadoShell extends StatefulWidget {
 
 class _EncargadoShellState extends State<EncargadoShell> {
   int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Avisa si se rescató una foto que se tomó cuando Android cerró la app.
+    final storage = context.read<StorageService>();
+    final n = storage.fotosRecuperadas;
+    if (n > 0) {
+      storage.fotosRecuperadas = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(n == 1 ? 'Se guardó la foto que tomó.' : 'Se guardaron las $n fotos que tomó.',
+              style: const TextStyle(fontSize: 18)),
+          behavior: SnackBarBehavior.floating,
+        ));
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

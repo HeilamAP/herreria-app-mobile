@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'services/aspecto_service.dart';
 import 'services/storage_service.dart';
 import 'services/auth_service.dart';
+import 'services/fotos_perdidas.dart';
 import 'services/app_engine_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/paleta.dart';
@@ -16,6 +17,7 @@ void main() async {
 
   final storageService = StorageService();
   await storageService.init();
+  await recuperarFotosPerdidas(storageService);
 
   runApp(PortonesApp(storageService: storageService));
 }

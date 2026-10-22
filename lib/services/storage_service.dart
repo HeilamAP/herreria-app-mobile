@@ -69,6 +69,21 @@ class StorageService extends ChangeNotifier {
     await _prefs?.setString('${_clave}_aspecto', aspecto);
   }
 
+  /// Trabajo al que se le está tomando una foto. Si Android cierra la app mientras la
+  /// cámara está abierta, al volver a abrirla se sabe a qué trabajo pertenece la foto.
+  String? get fotoPendiente => _prefs?.getString('${_clave}_foto_pendiente');
+
+  Future<void> guardarFotoPendiente(String? trabajoId) async {
+    if (trabajoId == null) {
+      await _prefs?.remove('${_clave}_foto_pendiente');
+    } else {
+      await _prefs?.setString('${_clave}_foto_pendiente', trabajoId);
+    }
+  }
+
+  /// Fotos rescatadas al abrir la app (ver fotos_perdidas.dart), para avisar al encargado.
+  int fotosRecuperadas = 0;
+
   String exportJson() {
     return const JsonEncoder.withIndent('  ').convert(_data.toJson());
   }

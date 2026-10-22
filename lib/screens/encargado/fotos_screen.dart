@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/visita_agenda.dart';
 import '../../services/app_engine_service.dart';
 import '../../services/foto_store.dart';
+import '../../services/storage_service.dart';
 import 'ui.dart';
 
 /// Miniatura cuadrada de una foto guardada. Si la foto ya no existe, muestra un aviso.
@@ -222,18 +223,29 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
       _aviso('Ya tiene ${VisitaAgenda.maxFotos} fotos. Quita una para agregar otra.');
       return;
     }
+    final storage = context.read<StorageService>();
     setState(() => _ocupado = true);
+    // Si Android cierra la app con la cámara abierta, la foto se rescata al volver a abrirla.
+    await storage.guardarFotoPendiente(widget.trabajoId);
+    XFile? archivo;
     try {
       // Se reduce el tamaño para que cada foto pese poco (unos 200 KB).
-      final archivo = await ImagePicker().pickImage(source: origen, maxWidth: 1600, maxHeight: 1600, imageQuality: 70);
+      archivo = await ImagePicker().pickImage(source: origen, maxWidth: 1600, maxHeight: 1600, imageQuality: 70);
+    } catch (e) {
+      debugPrint('Error al elegir foto: $e');
+      if (mounted) {
+        _aviso(origen == ImageSource.camera ? 'No se pudo abrir la cámara.' : 'No se pudo abrir la galería.');
+      }
+    }
+    await storage.guardarFotoPendiente(null);
+    try {
       if (archivo == null) return;
       final id = await guardarFoto(await archivo.readAsBytes());
       final actual = engine.visitaPorId(widget.trabajoId);
       if (actual != null) engine.actualizarNotaYFotos(actual.id, fotos: [...actual.fotos, id]);
-    } catch (_) {
-      if (mounted) {
-        _aviso(origen == ImageSource.camera ? 'No se pudo abrir la cámara.' : 'No se pudo abrir la galería.');
-      }
+    } catch (e) {
+      debugPrint('Error al guardar foto: $e');
+      if (mounted) _aviso('No se pudo guardar la foto. Intente de nuevo.');
     } finally {
       if (mounted) setState(() => _ocupado = false);
     }
