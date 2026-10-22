@@ -9,6 +9,7 @@ import 'package:portones_movil/screens/encargado/fotos_screen.dart';
 import 'package:portones_movil/screens/encargado/horario_dia.dart';
 import 'package:portones_movil/services/foto_store.dart';
 import 'package:portones_movil/screens/encargado/resumen_screen.dart';
+import 'package:portones_movil/screens/encargado/trabajos_screen.dart';
 import 'package:portones_movil/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:portones_movil/screens/encargado/ui.dart';
@@ -530,6 +531,45 @@ void main() {
       await tester.pumpWidget(PortonesApp(storageService: storage));
       expect(EC.oscuro, isFalse);
     });
+  });
+
+  testWidgets('Trabajos muestra una sola semana, de domingo a sábado', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    tester.view.physicalSize = const Size(380, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: Scaffold(body: TrabajosDiaScreen())),
+    ));
+    await tester.pumpAndSettle();
+
+    final domingo = domingoDe(hoy());
+    expect(find.text('Esta semana'), findsOneWidget);
+    // Los 7 días: el número de cada uno, y "Hoy" en lugar del nombre del día de hoy.
+    for (var i = 0; i < 7; i++) {
+      expect(find.text('${domingo.add(Duration(days: i)).day}'), findsWidgets);
+    }
+    expect(find.text('Hoy'), findsOneWidget);
+    final sabadoSiguienteSemana = domingo.add(const Duration(days: 13));
+    expect(find.text(diasCortos[sabadoSiguienteSemana.weekday - 1]), findsOneWidget); // solo un "Sáb"
+
+    await tester.tap(find.byTooltip('Siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text(semanaTexto(domingo.add(const Duration(days: 7)))), findsOneWidget);
+    expect(find.text('Hoy'), findsNothing);
+    await tester.tap(find.text('Volver a hoy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Esta semana'), findsOneWidget);
   });
 
   test('La hora se lee en formato nuevo y viejo', () {

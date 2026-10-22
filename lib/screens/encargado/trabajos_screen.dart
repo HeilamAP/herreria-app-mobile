@@ -21,27 +21,8 @@ class TrabajosDiaScreen extends StatefulWidget {
 }
 
 class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
-  static const _anchoDia = 92.0;
-  static const _separacionDia = 8.0;
-
   DateTime _dia = hoy();
   String _filtroEquipo = 'todos';
-  final _tiraDias = ScrollController();
-
-  @override
-  void dispose() {
-    _tiraDias.dispose();
-    super.dispose();
-  }
-
-  /// Mueve la tira de días para que el día elegido quede a la vista.
-  void _mostrarDiaEnTira(int index) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_tiraDias.hasClients) return;
-      final destino = (index * (_anchoDia + _separacionDia) - _anchoDia).clamp(0.0, _tiraDias.position.maxScrollExtent);
-      _tiraDias.animateTo(destino, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-    });
-  }
 
   String get _equipoConsulta => widget.admin ? _filtroEquipo : 'todos';
 
@@ -56,8 +37,93 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
   void _irADia(DateTime d) {
     if (!mounted) return;
     setState(() => _dia = soloDia(d));
-    final index = diasEntre(hoy(), _dia);
-    _mostrarDiaEnTira(index >= 0 && index < 14 ? index : 0);
+  }
+
+  /// La semana de arriba (domingo a sábado) con el día elegido; las flechas pasan a la semana anterior o siguiente.
+  Widget _semana(AppEngineService engine, String equipo, DateTime h) {
+    final domingo = domingoDe(_dia);
+    final dias = [for (var i = 0; i < 7; i++) domingo.add(Duration(days: i))];
+    final esEstaSemana = domingo == domingoDe(h);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SelectorConFlechas(
+          texto: esEstaSemana ? 'Esta semana' : semanaTexto(domingo),
+          onAnterior: () => _irADia(_dia.subtract(const Duration(days: 7))),
+          onSiguiente: () => _irADia(_dia.add(const Duration(days: 7))),
+        ),
+        const SizedBox(height: 8),
+        Row(children: [
+          for (final d in dias) ...[
+            if (d != domingo) const SizedBox(width: 4),
+            Expanded(child: _celdaDia(d, h, engine.pendientesEn(equipo, fechaKey(d)))),
+          ],
+        ]),
+        if (!esEstaSemana)
+          Center(
+            child: TextButton(
+              onPressed: () => _irADia(h),
+              child: const Text('Volver a hoy', style: TextStyle(fontSize: 17)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Un día de la semana: nombre corto, número y cuántos trabajos pendientes tiene.
+  Widget _celdaDia(DateTime d, DateTime h, int pendientes) {
+    final elegido = d == _dia;
+    final esHoy = d == h;
+    final pasado = d.isBefore(h);
+    final domingo = d.weekday == DateTime.sunday;
+    final colorTexto = elegido
+        ? EC.acentoTexto
+        : pasado
+            ? EC.textoTenue
+            : domingo
+                ? EC.peligro
+                : EC.texto;
+    return Material(
+      color: elegido ? EC.acentoFondo : EC.superficie,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: elegido ? EC.acento : esHoy ? EC.bordeFuerte : EC.borde,
+          width: elegido || esHoy ? 2 : 1,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _irADia(d),
+        child: SizedBox(
+          height: 76,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(esHoy ? 'Hoy' : diasCortos[d.weekday - 1],
+                    style: TextStyle(fontSize: 15, fontWeight: esHoy ? FontWeight.w800 : FontWeight.w600, color: colorTexto)),
+                Text('${d.day}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colorTexto, height: 1.1)),
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: pendientes > 0
+                      ? BoxDecoration(color: elegido ? EC.acento : EC.acentoFondo, borderRadius: BorderRadius.circular(10))
+                      : null,
+                  child: Text(pendientes > 0 ? '$pendientes' : ' ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: elegido ? Colors.white : EC.acentoTexto,
+                      )),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _agendar() {
@@ -113,8 +179,6 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
     final equipo = _equipoConsulta;
     final h = hoy();
     final lista = engine.trabajosDelDia(equipo, fechaKey(_dia));
-    final dias = [for (var i = 0; i < 14; i++) h.add(Duration(days: i))];
-    if (!dias.contains(_dia)) dias.insert(0, _dia);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -133,35 +197,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
           ),
           const SizedBox(height: 10),
         ],
-        SizedBox(
-          height: 74,
-          child: ListView.separated(
-            controller: _tiraDias,
-            scrollDirection: Axis.horizontal,
-            itemCount: dias.length,
-            separatorBuilder: (_, _) => const SizedBox(width: _separacionDia),
-            itemBuilder: (_, i) {
-              final d = dias[i];
-              final dif = diasEntre(h, d);
-              final n = engine.pendientesEn(equipo, fechaKey(d));
-              final arriba = dif == 0 ? 'Hoy' : dif == 1 ? 'Mañana' : '${diasCortos[d.weekday - 1]} ${d.day}';
-              final abajo = n > 0 ? '$n pend.' : (dif < 2 ? '${d.day} ${meses[d.month - 1].substring(0, 3)}' : meses[d.month - 1].substring(0, 3));
-              return SizedBox(
-                width: _anchoDia,
-                child: BotonGrande(
-                  texto: arriba,
-                  subtitulo: abajo,
-                  fontSize: 16,
-                  alto: 72,
-                  padding: 4,
-                  ajustarTexto: true,
-                  seleccionado: d == _dia,
-                  onTap: () => _irADia(d),
-                ),
-              );
-            },
-          ),
-        ),
+        _semana(engine, equipo, h),
         const SizedBox(height: 10),
         BotonGrande(
           texto: 'Ver otro día en el calendario',
