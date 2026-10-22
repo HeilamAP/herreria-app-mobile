@@ -225,7 +225,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: BotonGrande(
-                texto: 'Vendí algo ahora',
+                texto: 'Venta del día',
                 icono: Icons.shopping_cart_outlined,
                 vertical: true,
                 fontSize: 18,
