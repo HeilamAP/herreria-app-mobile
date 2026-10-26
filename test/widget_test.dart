@@ -578,4 +578,20 @@ void main() {
     expect(VisitaAgenda.minutosDeHora('12:15 AM'), 15);
     expect(VisitaAgenda.horaDeMinutos(16 * 60 + 15), '16:15');
   });
+
+  test('El teléfono solo acepta 10 números y se separa al escribir', () {
+    expect(formatoTelefono('9991234567'), '999 123 4567');
+    expect(formatoTelefono('999-123-45.67#*'), '999 123 4567');
+    expect(formatoTelefono('99912345678901'), '999 123 4567'); // números de más se ignoran
+    expect(formatoTelefono('9991'), '999 1');
+    expect(formatoTelefono('+()'), '');
+
+    final f = FormatoTelefono();
+    TextEditingValue escribir(String texto) =>
+        f.formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: texto, selection: TextSelection.collapsed(offset: texto.length)));
+    expect(escribir('999123').text, '999 123');
+    expect(escribir('999123').selection.end, 7);
+    expect(escribir('999 123 45678').text, '999 123 4567');
+    expect(escribir('abc').text, '');
+  });
 }

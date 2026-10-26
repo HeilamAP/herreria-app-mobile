@@ -52,6 +52,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
   String _periodo = 'manana';
   late String _equipo;
   String? _error;
+  String? _errorTelefono;
 
   /// Se tocó un dato en "¿Está bien así?": al terminar ese paso se regresa ahí.
   bool _corrigiendo = false;
@@ -87,7 +88,10 @@ class _AgendarScreenState extends State<AgendarScreen> {
     final e = widget.existente;
     if (e != null) {
       _cliente.text = e.cliente;
-      _telefono.text = e.telefono;
+      // Teléfonos guardados antes (con +52, guiones, etc.): se dejan los últimos 10 números.
+      final digitos = e.telefono.replaceAll(RegExp(r'[^0-9]'), '');
+      _telefono.text = formatoTelefono(
+          digitos.length > digitosTelefono ? digitos.substring(digitos.length - digitosTelefono) : digitos);
       _direccion.text = e.direccion;
       _notas.text = e.notas;
       _tipo = e.tipo;
@@ -270,11 +274,21 @@ class _AgendarScreenState extends State<AgendarScreen> {
           opcional: '(si lo tienes)',
           controller: _telefono,
           ejemplo: '999 123 4567',
-          teclado: TextInputType.phone,
+          teclado: TextInputType.number,
+          formatos: [FormatoTelefono()],
+          onChanged: (_) {
+            if (_errorTelefono != null) setState(() => _errorTelefono = null);
+          },
         ),
+        TextoError(_errorTelefono),
         _siguiente(() {
           if (_cliente.text.trim().isEmpty) {
             setState(() => _error = 'Escribe el nombre del cliente');
+            return;
+          }
+          final digitos = _telefono.text.replaceAll(' ', '').length;
+          if (digitos > 0 && digitos < digitosTelefono) {
+            setState(() => _errorTelefono = 'El teléfono lleva $digitosTelefono números (faltan ${digitosTelefono - digitos})');
             return;
           }
           _avanzar();

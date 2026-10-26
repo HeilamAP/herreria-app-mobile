@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/aspecto_service.dart';
@@ -6,6 +7,38 @@ import '../../theme/app_theme.dart';
 import '../../theme/paleta.dart';
 
 export '../../theme/paleta.dart';
+
+/// Los teléfonos de México tienen 10 números.
+const digitosTelefono = 10;
+
+/// Escribe el teléfono como "999 123 4567" (solo toma los números, máximo 10).
+String formatoTelefono(String texto) {
+  final d = texto.replaceAll(RegExp(r'[^0-9]'), '');
+  final n = d.length > digitosTelefono ? d.substring(0, digitosTelefono) : d;
+  final b = StringBuffer();
+  for (var i = 0; i < n.length; i++) {
+    if (i == 3 || i == 6) b.write(' ');
+    b.write(n[i]);
+  }
+  return b.toString();
+}
+
+/// Al escribir el teléfono solo deja poner números (máximo 10) y los va separando.
+class FormatoTelefono extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue anterior, TextEditingValue nuevo) {
+    final texto = formatoTelefono(nuevo.text);
+    // El cursor queda después del mismo número de dígitos que tenía antes de dar formato.
+    final cursor = nuevo.selection.end.clamp(0, nuevo.text.length);
+    final digitosAntes = nuevo.text.substring(0, cursor).replaceAll(RegExp(r'[^0-9]'), '').length;
+    var pos = 0, vistos = 0;
+    while (pos < texto.length && vistos < digitosAntes) {
+      if (texto[pos] != ' ') vistos++;
+      pos++;
+    }
+    return TextEditingValue(text: texto, selection: TextSelection.collapsed(offset: pos));
+  }
+}
 
 
 const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -319,6 +352,7 @@ class CampoGrande extends StatelessWidget {
   final TextInputType? teclado;
   final ValueChanged<String>? onChanged;
   final TextCapitalization mayusculas;
+  final List<TextInputFormatter>? formatos;
 
   const CampoGrande({
     super.key,
@@ -329,6 +363,7 @@ class CampoGrande extends StatelessWidget {
     this.teclado,
     this.onChanged,
     this.mayusculas = TextCapitalization.sentences,
+    this.formatos,
   });
 
   @override
@@ -345,6 +380,7 @@ class CampoGrande extends StatelessWidget {
           controller: controller,
           keyboardType: teclado,
           textCapitalization: mayusculas,
+          inputFormatters: formatos,
           onChanged: onChanged,
           style: TextStyle(fontSize: 21, color: EC.texto),
           decoration: InputDecoration(hintText: ejemplo),
