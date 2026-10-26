@@ -22,17 +22,14 @@ class TrabajosDiaScreen extends StatefulWidget {
 
 class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
   DateTime _dia = hoy();
-  String _filtroEquipo = 'todos';
-
-  String get _equipoConsulta => widget.admin ? _filtroEquipo : 'todos';
+  /// La agenda es compartida: encargados y administrador ven los dos equipos.
+  static const _equipoConsulta = 'todos';
 
   /// Equipo del encargado que tiene la sesión (null para el administrador).
   String? get _equipoPropio => widget.admin ? null : context.read<AuthService>().currentUser?.equipoId;
 
   /// Equipo que se propone al crear trabajos nuevos (se puede cambiar al agendar).
-  String get _equipoNuevo => widget.admin
-      ? (_filtroEquipo == 'todos' ? 'equipo1' : _filtroEquipo)
-      : (context.read<AuthService>().currentUser?.equipoId ?? 'equipo1');
+  String get _equipoNuevo => widget.admin ? 'equipo1' : (context.read<AuthService>().currentUser?.equipoId ?? 'equipo1');
 
   void _irADia(DateTime d) {
     if (!mounted) return;
@@ -183,20 +180,6 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        if (widget.admin) ...[
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final e in ['todos', 'equipo1', 'equipo2'])
-                ChoiceChip(
-                  label: Text(e == 'todos' ? 'Todos los equipos' : nombreEquipo(e), style: const TextStyle(fontSize: 16)),
-                  selected: _filtroEquipo == e,
-                  onSelected: (_) => setState(() => _filtroEquipo = e),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-        ],
         _semana(engine, equipo, h),
         const SizedBox(height: 10),
         BotonGrande(
@@ -251,7 +234,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
 
   _TarjetaTrabajo _tarjeta(VisitaAgenda t, {VoidCallback? antes}) => _TarjetaTrabajo(
         trabajo: t,
-        mostrarEquipo: !widget.admin || _filtroEquipo == 'todos',
+        mostrarEquipo: true,
         equipoPropio: _equipoPropio,
         onCobrar: () {
           antes?.call();
