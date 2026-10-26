@@ -141,20 +141,18 @@ class _TarjetaEquipo extends StatelessWidget {
             style: TextStyle(fontSize: 16, color: EC.textoSuave),
           ),
           const SizedBox(height: 10),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.3,
-            children: [
-              dato('Trabajos', resumen.trabajos),
-              dato('Ventas', resumen.ventas),
-              dato('Gastos', resumen.gastos, color: EC.peligroTexto),
-              dato('Quedó', resumen.quedo),
-            ],
-          ),
+          // Dos filas de dos cuadros; el alto se ajusta al texto para que el monto nunca se corte.
+          Row(children: [
+            Expanded(child: dato('Trabajos', resumen.trabajos)),
+            const SizedBox(width: 8),
+            Expanded(child: dato('Ventas', resumen.ventas)),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: dato('Gastos', resumen.gastos, color: EC.peligroTexto)),
+            const SizedBox(width: 8),
+            Expanded(child: dato('Quedó', resumen.quedo)),
+          ]),
         ],
       ),
     );
