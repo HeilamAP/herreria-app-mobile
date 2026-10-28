@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_engine_service.dart';
 import '../services/auth_service.dart';
+import 'encargado/gastos_screen.dart';
 import 'encargado/ui.dart';
 
 /// Inicio del administrador: una tarjeta por equipo con trabajos, ventas, gastos y lo que quedó.
@@ -47,6 +48,8 @@ class _AdminInicioScreenState extends State<AdminInicioScreen> {
         titulo: '${nombreEquipo(e)}${encargado.isNotEmpty ? ' · $encargado' : ''}',
         resumen: r,
         pendientesHoy: pendientes,
+        // El administrador puede anotar gastos de cualquier equipo y sin límite.
+        onAnotarGasto: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => NuevoGastoScreen(equipoId: e))),
       ));
       tarjetas.add(const SizedBox(height: 14));
     }
@@ -105,8 +108,9 @@ class _TarjetaEquipo extends StatelessWidget {
   final String titulo;
   final ResumenEquipo resumen;
   final int pendientesHoy;
+  final VoidCallback onAnotarGasto;
 
-  const _TarjetaEquipo({required this.titulo, required this.resumen, required this.pendientesHoy});
+  const _TarjetaEquipo({required this.titulo, required this.resumen, required this.pendientesHoy, required this.onAnotarGasto});
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +158,8 @@ class _TarjetaEquipo extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: dato('Quedó', resumen.quedo, color: resumen.quedo < 0 ? EC.peligroTexto : null)),
           ]),
+          const SizedBox(height: 12),
+          BotonGrande(texto: 'Anotar gasto', icono: Icons.receipt_long_outlined, alto: 54, fontSize: 18, onTap: onAnotarGasto),
         ],
       ),
     );

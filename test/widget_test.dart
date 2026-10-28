@@ -225,6 +225,38 @@ void main() {
     expect(find.textContaining('pídeselo al administrador'), findsNothing);
   });
 
+  testWidgets('El administrador anota gastos de cualquier equipo y sin límite', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    expect(auth.login('heilamay', 'admin123', onError: (_) {}), isTrue);
+    tester.view.physicalSize = const Size(420, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: NuevoGastoScreen(equipoId: 'equipo2')),
+    ));
+
+    await tester.tap(find.text('Material'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hasta \$15,000 por gasto.'), findsNothing);
+    for (final d in ['2', '0', '0', '0', '0']) {
+      await tester.tap(find.text(d));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Guardar gasto'));
+    await tester.pumpAndSettle();
+    expect(find.text('Guardado'), findsOneWidget);
+    final g = engine.data.gastos.single;
+    expect((g.monto, g.equipoId), (20000, 'equipo2'));
+  });
+
   test('La semana del Resumen va de domingo a sábado', () {
     // El 20 de octubre de 2026 es martes: su semana es del domingo 18 al sábado 24.
     expect(domingoDe(DateTime(2026, 10, 20)), DateTime(2026, 10, 18));
