@@ -556,6 +556,9 @@ class OpcionesTrabajoScreen extends StatelessWidget {
     final t = trabajo;
     final nav = Navigator.of(context);
     final cosa = t.esVenta ? 'esta venta' : 'este trabajo';
+    // Un cobro ya hecho solo lo cambia o lo borra el administrador.
+    final esAdmin = context.read<AuthService?>()?.isAdmin ?? false;
+    final cobroBloqueado = t.completado && !esAdmin;
 
     void abrirAgendar({required bool soloFecha}) => nav.pushReplacement(MaterialPageRoute(
           builder: (_) => AgendarScreen(
@@ -591,7 +594,24 @@ class OpcionesTrabajoScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              if (t.completado)
+              if (cobroBloqueado)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: EC.exitoFondo,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: EC.exitoBorde),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.lock_outline, color: EC.exitoTexto, size: 26),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('Ya está cobrado. Si hay que cambiar el cobro o borrarlo, pídeselo al administrador.',
+                          style: TextStyle(fontSize: 18, color: EC.exitoTexto, height: 1.3)),
+                    ),
+                  ]),
+                )
+              else if (t.completado)
                 BotonGrande(
                   texto: 'Cambiar el cobro',
                   icono: Icons.payments_outlined,
@@ -609,37 +629,45 @@ class OpcionesTrabajoScreen extends StatelessWidget {
                 ),
               const SizedBox(height: 12),
               BotonGrande(texto: 'Cambiar los datos', icono: Icons.edit_outlined, alto: 78, onTap: () => abrirAgendar(soloFecha: false)),
-              const SizedBox(height: 12),
-              BotonGrande(
-                texto: 'Borrar $cosa',
-                icono: Icons.delete_outline,
-                alto: 78,
-                estilo: EstiloBoton.peligroSuave,
-                onTap: () => nav.pushReplacement(MaterialPageRoute(
-                  builder: (ctx) => PantallaBorrar(
-                    pregunta: '¿Borrar ${t.esVenta ? 'la venta' : 'el trabajo'} de ${t.cliente}?',
-                    detalle: '${t.tipo} · ${diaTexto(fechaDeKey(t.fecha))}'
-                        '${t.completado ? '\nTambién se borra el cobro de ${dinero(t.monto)}' : ''}',
-                    onBorrar: () {
-                      final engine = ctx.read<AppEngineService>();
-                      final index = engine.indexOfVisita(t.id);
-                      final respaldo = t.copia();
-                      engine.deleteVisitaAgenda(t.id);
-                      Navigator.of(ctx).pushReplacement(MaterialPageRoute(
-                        builder: (_) => PantallaListo(
-                          titulo: 'Borrado',
-                          mensaje: '${t.cliente} · ${t.tipo}',
-                          onDeshacer: () => engine.insertVisitaAt(respaldo, index),
-                        ),
-                      ));
-                    },
-                  ),
-                )),
-              ),
+              // Borrar un trabajo cobrado también borra su cobro: solo el administrador.
+              if (!cobroBloqueado) ...[
+                const SizedBox(height: 12),
+                _botonBorrar(context, t, cosa),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _botonBorrar(BuildContext context, VisitaAgenda t, String cosa) {
+    final nav = Navigator.of(context);
+    return BotonGrande(
+      texto: 'Borrar $cosa',
+      icono: Icons.delete_outline,
+      alto: 78,
+      estilo: EstiloBoton.peligroSuave,
+      onTap: () => nav.pushReplacement(MaterialPageRoute(
+        builder: (ctx) => PantallaBorrar(
+          pregunta: '¿Borrar ${t.esVenta ? 'la venta' : 'el trabajo'} de ${t.cliente}?',
+          detalle: '${t.tipo} · ${diaTexto(fechaDeKey(t.fecha))}'
+              '${t.completado ? '\nTambién se borra el cobro de ${dinero(t.monto)}' : ''}',
+          onBorrar: () {
+            final engine = ctx.read<AppEngineService>();
+            final index = engine.indexOfVisita(t.id);
+            final respaldo = t.copia();
+            engine.deleteVisitaAgenda(t.id);
+            Navigator.of(ctx).pushReplacement(MaterialPageRoute(
+              builder: (_) => PantallaListo(
+                titulo: 'Borrado',
+                mensaje: '${t.cliente} · ${t.tipo}',
+                onDeshacer: () => engine.insertVisitaAt(respaldo, index),
+              ),
+            ));
+          },
+        ),
+      )),
     );
   }
 }

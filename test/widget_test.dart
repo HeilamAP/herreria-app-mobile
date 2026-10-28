@@ -147,7 +147,7 @@ void main() {
     await tester.tap(find.text('Efectivo'));
     await tester.pumpAndSettle();
     expect(find.text('Ana Pech'), findsOneWidget);
-    expect(find.text('Toca un cobro para cambiarlo o borrarlo.'), findsOneWidget);
+    expect(find.text('Toca un cobro para ver sus opciones.'), findsOneWidget);
 
     await tester.tap(find.text('Transferencia'));
     await tester.pumpAndSettle();
@@ -189,6 +189,40 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.text('\$700')).style?.color, EC.texto);
+  });
+
+  testWidgets('Un cobro ya hecho solo lo cambia o lo borra el administrador', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    final t = VisitaAgenda(
+      id: 'c1', cliente: 'Ana Pech', fecha: fechaKey(hoy()), hora: '10:00', tipo: 'Instalación', direccion: '',
+      telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: 900, metodoPago: 'efectivo',
+    );
+    engine.saveVisitaAgenda(t);
+    Future<void> abrirOpciones() => tester.pumpWidget(MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthService>.value(value: auth),
+            ChangeNotifierProvider<AppEngineService>.value(value: engine),
+          ],
+          child: MaterialApp(key: UniqueKey(), home: OpcionesTrabajoScreen(trabajo: t)),
+        ));
+
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    await abrirOpciones();
+    expect(find.text('Cambiar el cobro'), findsNothing);
+    expect(find.text('Borrar este trabajo'), findsNothing);
+    expect(find.textContaining('pídeselo al administrador'), findsOneWidget);
+    expect(find.text('Cambiar los datos'), findsOneWidget); // los datos del cliente sí se pueden corregir
+
+    auth.logout();
+    expect(auth.login('heilamay', 'admin123', onError: (_) {}), isTrue);
+    await abrirOpciones();
+    expect(find.text('Cambiar el cobro'), findsOneWidget);
+    expect(find.text('Borrar este trabajo'), findsOneWidget);
+    expect(find.textContaining('pídeselo al administrador'), findsNothing);
   });
 
   test('La semana del Resumen va de domingo a sábado', () {
