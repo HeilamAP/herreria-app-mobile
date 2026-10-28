@@ -38,6 +38,8 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
     final equipo = context.read<AuthService>().currentUser?.equipoId ?? 'equipo1';
     final r = engine.resumen(equipo, _desde, _hasta);
     final cuando = _cuando;
+    // Si se gastó más de lo que se cobró, sale negativo y se pinta en rojo como los gastos.
+    final quedo = r.efectivo + r.transferencia - r.gastos;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -74,8 +76,8 @@ class _ResumenEquipoScreenState extends State<ResumenEquipoScreen> {
           decoration: BoxDecoration(color: EC.superficie, borderRadius: BorderRadius.circular(16)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Lo que quedó $cuando', style: TextStyle(fontSize: 20, color: EC.textoSuave)),
-            Text(dinero(r.efectivo + r.transferencia - r.gastos),
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: EC.texto)),
+            Text(dinero(quedo),
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: quedo < 0 ? EC.peligroTexto : EC.texto)),
           ]),
         ),
         if (r.ventas > 0) ...[

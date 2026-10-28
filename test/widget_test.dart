@@ -157,6 +157,39 @@ void main() {
     expect(find.text('Ana Pech'), findsNothing);
   });
 
+  testWidgets('En el Resumen, "Lo que quedó" negativo sale en rojo', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await tester.runAsync(storage.init);
+    final auth = AuthService(storage: storage);
+    final engine = AppEngineService(storage: storage);
+    auth.crearPinYEntrar(storage.data.usuarios.firstWhere((u) => u.equipoId == 'equipo1'), '1234');
+    engine.saveVisitaAgenda(VisitaAgenda(
+      id: 'v1', cliente: 'Ana Pech', fecha: fechaKey(hoy()), hora: '10:00', tipo: 'Venta', direccion: '',
+      telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: 900, metodoPago: 'efectivo',
+    ));
+    engine.addGasto(Gasto(id: 'g1', fecha: fechaKey(hoy()), descripcion: 'Material', monto: 1200));
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthService>.value(value: auth),
+        ChangeNotifierProvider<AppEngineService>.value(value: engine),
+      ],
+      child: const MaterialApp(home: Scaffold(body: ResumenEquipoScreen())),
+    ));
+
+    final quedo = tester.widget<Text>(find.text('−\$300'));
+    expect(quedo.style?.color, EC.peligroTexto);
+
+    // Con ganancia, el monto vuelve al color normal.
+    engine.saveVisitaAgenda(VisitaAgenda(
+      id: 'v2', cliente: 'Luis Kú', fecha: fechaKey(hoy()), hora: '12:00', tipo: 'Venta', direccion: '',
+      telefono: '', notas: '', estado: 'completado', equipoId: 'equipo1', monto: 1000, metodoPago: 'efectivo',
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.text('\$700')).style?.color, EC.texto);
+  });
+
   test('La semana del Resumen va de domingo a sábado', () {
     // El 20 de octubre de 2026 es martes: su semana es del domingo 18 al sábado 24.
     expect(domingoDe(DateTime(2026, 10, 20)), DateTime(2026, 10, 18));

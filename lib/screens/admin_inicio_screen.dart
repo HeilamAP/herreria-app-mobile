@@ -78,10 +78,11 @@ class _AdminInicioScreenState extends State<AdminInicioScreen> {
                 children: [
                   Text('Los dos equipos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: EC.texto)),
                   const SizedBox(height: 8),
-                  _linea('Quedó (cobrado − gastos)', dinero(totalQuedo)),
+                  _linea('Quedó (cobrado − gastos)', dinero(totalQuedo), color: totalQuedo < 0 ? EC.peligroTexto : null),
                   _linea('Pago a trabajadores', '−${dinero(nomina)}', color: EC.peligroTexto),
                   const Divider(height: 20),
-                  _linea('Ganancia', dinero(totalQuedo - nomina), grande: true),
+                  _linea('Ganancia', dinero(totalQuedo - nomina),
+                      grande: true, color: totalQuedo - nomina < 0 ? EC.peligroTexto : null),
                 ],
               ),
             ),
@@ -151,7 +152,7 @@ class _TarjetaEquipo extends StatelessWidget {
           Row(children: [
             Expanded(child: dato('Gastos', resumen.gastos, color: EC.peligroTexto)),
             const SizedBox(width: 8),
-            Expanded(child: dato('Quedó', resumen.quedo)),
+            Expanded(child: dato('Quedó', resumen.quedo, color: resumen.quedo < 0 ? EC.peligroTexto : null)),
           ]),
         ],
       ),
