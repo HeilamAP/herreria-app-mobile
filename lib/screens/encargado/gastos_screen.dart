@@ -14,6 +14,9 @@ const categoriasGasto = <(String, IconData)>[
   ('Otro', Icons.more_horiz),
 ];
 
+/// Lo más que un encargado puede anotar en un solo gasto. Más que eso lo anota el administrador.
+const limiteGasto = 15000;
+
 IconData iconoDeCategoria(String c) =>
     categoriasGasto.firstWhere((x) => x.$1.toLowerCase() == c.toLowerCase(), orElse: () => categoriasGasto.last).$2;
 
@@ -171,6 +174,8 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
   String _monto = '';
   String? _error;
 
+  bool get _esAdmin => context.read<AuthService?>()?.isAdmin ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -193,8 +198,13 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
   }
 
   void _guardar() {
-    if ((int.tryParse(_monto) ?? 0) <= 0) {
+    final cantidad = int.tryParse(_monto) ?? 0;
+    if (cantidad <= 0) {
       setState(() => _error = 'Escribe la cantidad');
+      return;
+    }
+    if (cantidad > limiteGasto && !_esAdmin) {
+      setState(() => _error = 'El límite es ${dinero(limiteGasto)} por gasto. Si es necesario, pídeselo al administrador.');
       return;
     }
     final engine = context.read<AppEngineService>();
@@ -276,6 +286,11 @@ class _NuevoGastoScreenState extends State<NuevoGastoScreen> {
                         }),
                       ),
                       TextoError(_error),
+                      if (_error == null && !_esAdmin)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text('Hasta ${dinero(limiteGasto)} por gasto.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+                        ),
                       const SizedBox(height: 20),
                       BotonGrande(texto: 'Guardar gasto', icono: Icons.check, estilo: EstiloBoton.primario, onTap: _guardar),
                     ],

@@ -412,6 +412,26 @@ void main() {
       expect(engine.data.gastos.single.id, 'g1');
       expect(engine.data.gastos.single.monto, 3000);
     });
+
+    testWidgets('Gasto: un encargado no puede anotar más de \$15,000', (tester) async {
+      await abrir(tester, const SizedBox());
+      final g = Gasto(id: 'g1', fecha: fechaKey(hoy()), descripcion: 'Material', categoria: 'Material', monto: 15000);
+      engine.addGasto(g);
+      await mostrar(tester, NuevoGastoScreen(equipoId: 'equipo1', existente: g));
+      expect(find.text('Hasta \$15,000 por gasto.'), findsOneWidget);
+
+      await tester.tap(find.text('0')); // $150,000
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar gasto'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('El límite es \$15,000 por gasto'), findsOneWidget);
+      expect(engine.data.gastos.single.monto, 15000); // no se guardó
+
+      await mostrar(tester, NuevoGastoScreen(equipoId: 'equipo1', existente: g, key: UniqueKey()));
+      await tester.tap(find.text('Guardar gasto')); // justo $15,000 sí se puede
+      await tester.pumpAndSettle();
+      expect(find.text('Gasto corregido'), findsOneWidget);
+    });
   });
 
   group('Notas y fotos de los trabajos', () {
