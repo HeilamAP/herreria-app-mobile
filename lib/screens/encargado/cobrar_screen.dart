@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/visita_agenda.dart';
 import '../../services/app_engine_service.dart';
+import '../../services/ubicacion.dart';
 import 'fotos_screen.dart';
 import 'ui.dart';
 
@@ -104,6 +105,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
         ..monto = monto
         ..metodoPago = metodo;
       engine.saveVisitaAgenda(v);
+      if (!widget.corregirVenta) _marcarSalida(engine, v.id);
       _terminar(
         widget.corregirVenta ? 'Venta corregida' : 'Venta guardada',
         'Venta de ${dinero(monto)} a ${v.cliente}\nen $formaTxt',
@@ -119,6 +121,7 @@ class _CobrarScreenState extends State<CobrarScreen> {
       ..monto = monto
       ..metodoPago = metodo;
     engine.saveVisitaAgenda(actualizado);
+    if (!widget.cambiarCobro) _marcarSalida(engine, actualizado.id);
     _terminar(
       widget.cambiarCobro ? 'Cobro cambiado' : 'Cobrado',
       '${dinero(monto)} en $formaTxt\n${actualizado.cliente}',
@@ -127,6 +130,10 @@ class _CobrarScreenState extends State<CobrarScreen> {
       ofrecerFotos: !widget.cambiarCobro,
     );
   }
+
+  /// Hora y lugar del cobro (evidencia). Se toma en segundo plano para no hacerlos esperar.
+  void _marcarSalida(AppEngineService engine, String id) =>
+      tomarMarca(engine, id).then((m) => engine.marcarSalida(id, m));
 
   /// Muestra "Guardado" con la opción de corregir (reabre esta pantalla con los datos ya escritos).
   /// Al cobrar por primera vez, antes pregunta si quieren agregar fotos o una nota.

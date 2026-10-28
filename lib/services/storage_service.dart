@@ -73,11 +73,16 @@ class StorageService extends ChangeNotifier {
   /// cámara está abierta, al volver a abrirla se sabe a qué trabajo pertenece la foto.
   String? get fotoPendiente => _prefs?.getString('${_clave}_foto_pendiente');
 
-  Future<void> guardarFotoPendiente(String? trabajoId) async {
+  /// Si la foto pendiente es de la cámara (lleva sello) o de la galería (no lleva).
+  bool get fotoPendienteDeCamara => _prefs?.getBool('${_clave}_foto_pendiente_camara') ?? false;
+
+  Future<void> guardarFotoPendiente(String? trabajoId, {bool camara = false}) async {
     if (trabajoId == null) {
       await _prefs?.remove('${_clave}_foto_pendiente');
+      await _prefs?.remove('${_clave}_foto_pendiente_camara');
     } else {
       await _prefs?.setString('${_clave}_foto_pendiente', trabajoId);
+      await _prefs?.setBool('${_clave}_foto_pendiente_camara', camara);
     }
   }
 

@@ -5,6 +5,7 @@ import '../models/gasto.dart';
 import '../models/trabajo.dart';
 import '../models/empleado.dart';
 import '../models/pago_semanal.dart';
+import '../models/marca.dart';
 import '../models/visita_agenda.dart';
 import '../models/backup_data.dart';
 import 'storage_service.dart';
@@ -417,10 +418,33 @@ class AppEngineService extends ChangeNotifier {
     final v = visitaPorId(id);
     if (v == null) return;
     if (notaFinal != null) v.notaFinal = notaFinal;
-    if (fotos != null) v.fotos = List.of(fotos);
+    if (fotos != null) {
+      v.fotos = List.of(fotos);
+      v.marcasFotos.removeWhere((foto, _) => !v.fotos.contains(foto)); // fotos quitadas
+    }
     storage.saveData();
     notifyListeners();
   }
+
+  // --- Evidencia: hora y lugar (ver Marca y ubicacion.dart) ---
+
+  void _marcar(String id, void Function(VisitaAgenda v) cambio) {
+    final v = visitaPorId(id);
+    if (v == null) return;
+    cambio(v);
+    storage.saveData();
+    notifyListeners();
+  }
+
+  void marcarLlegada(String id, Marca m) => _marcar(id, (v) => v.llegada = m);
+  void marcarSalida(String id, Marca m) => _marcar(id, (v) => v.salida = m);
+  void marcarFoto(String id, String fotoId, Marca m) => _marcar(id, (v) => v.marcasFotos[fotoId] = m);
+
+  void guardarDomicilio(String id, double lat, double lng, String direccion) => _marcar(id, (v) {
+        v.domLat = lat;
+        v.domLng = lng;
+        v.domDireccion = direccion;
+      });
 
   /// Para "deshacer" un borrado: regresa la cita a donde estaba.
   void insertVisitaAt(VisitaAgenda v, int index) {

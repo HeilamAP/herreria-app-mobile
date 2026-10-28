@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Internet: tipo de letra y, más adelante, datos compartidos en la nube. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Ubicación: solo en el momento de "Llegué", al cobrar y al tomar fotos (sello de evidencia). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="Ay Oy Herrería"
         android:name="${applicationName}"

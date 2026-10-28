@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:portones_movil/models/gasto.dart';
 import 'package:portones_movil/models/direccion.dart';
+import 'package:portones_movil/models/marca.dart';
+import 'package:portones_movil/screens/encargado/evidencia.dart';
+import 'package:portones_movil/services/sello_foto.dart';
+import 'package:portones_movil/services/ubicacion.dart';
+import 'package:image/image.dart' as img;
 import 'package:portones_movil/screens/encargado/agendar_screen.dart';
 import 'package:portones_movil/screens/encargado/cobrar_screen.dart';
 import 'package:portones_movil/screens/encargado/gastos_screen.dart';
@@ -22,6 +27,9 @@ import 'package:portones_movil/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // Sin GPS ni mapa de verdad en las pruebas.
+  setUp(() => ubicador = UbicadorFijo());
+
   testWidgets('La entrada muestra a los encargados', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
@@ -767,5 +775,112 @@ void main() {
     expect(escribir('999123').selection.end, 7);
     expect(escribir('999 123 45678').text, '999 123 4567');
     expect(escribir('abc').text, '');
+  });
+
+  group('Evidencia: hora y lugar', () {
+    // Calle 60 x 61, Centro de Mérida, y un punto a ~3 km.
+    const domLat = 20.96712, domLng = -89.62374;
+    Marca marca({double lat = domLat, double lng = domLng, bool falsa = false}) =>
+        Marca(hora: DateTime(2026, 10, 28, 10, 42), lat: lat, lng: lng, precisionM: 8, falsa: falsa);
+    VisitaAgenda trabajo() => VisitaAgenda(
+          id: 'e1', cliente: 'Carlos Mendoza', fecha: fechaKey(hoy()), hora: '09:00', tipo: 'Instalación',
+          direccion: 'Calle 60 #450 x 53 y 55, Col. Centro, Mérida', telefono: '', notas: '', estado: 'pendiente',
+          partes: PartesDireccion(calle: '60', numero: '450', cruce1: '53', cruce2: '55', colonia: 'Centro'),
+        );
+
+    test('Distancias y "en el domicilio"', () {
+      expect(distanciaM(domLat, domLng, domLat, domLng), 0);
+      expect(distanciaM(domLat, domLng, domLat + 0.027, domLng), closeTo(3000, 30)); // ~3 km al norte
+      final t = trabajo();
+      expect(enDomicilio(t, marca()), isFalse); // todavía no se sabe dónde queda la dirección
+      t
+        ..domLat = domLat
+        ..domLng = domLng
+        ..domDireccion = t.direccion;
+      expect(enDomicilio(t, marca(lat: domLat + 0.001)), isTrue); // ~110 m
+      expect(enDomicilio(t, marca(lat: domLat + 0.027)), isFalse);
+      expect(enDomicilio(t, marca(falsa: true)), isFalse); // ubicación falsa no cuenta
+      t.direccion = 'Otra dirección';
+      expect(t.domicilioUbicado, isFalse); // si cambia la dirección, hay que volver a ubicarla
+    });
+
+    test('Al mapa se le pregunta sin cruzamientos', () {
+      expect(consultaMapa(trabajo()), 'Calle 60 450, Centro, Mérida, Yucatán, México');
+      final viejo = trabajo()
+        ..partes = null
+        ..direccion = 'Calle 21 #300 x 20 y 22, Mérida';
+      expect(consultaMapa(viejo), 'Calle 21 300, Mérida, Yucatán, México');
+    });
+
+    test('Las marcas se guardan y se leen', () {
+      final t = trabajo()
+        ..llegada = marca()
+        ..salida = marca(falsa: true)
+        ..marcasFotos['f1'] = marca(lat: 21.0);
+      final copia = VisitaAgenda.fromJson(jsonDecode(jsonEncode(t.toJson())));
+      expect(copia.llegada?.lat, domLat);
+      expect(copia.salida?.falsa, isTrue);
+      expect(copia.marcasFotos['f1']?.lat, 21.0);
+      expect(copia.llegada?.hora, DateTime(2026, 10, 28, 10, 42));
+    });
+
+    test('El sello dice dirección, fecha y trabajo, sin coordenadas', () {
+      final lineas = lineasSello(trabajo(), DateTime(2026, 10, 28, 10, 42));
+      expect(lineas, [
+        'Calle 60 #450 x 53 y 55, Col. Centro, Mérida',
+        'Mié 28 oct 2026 · 10:42 a.m.',
+        'Instalación · Carlos Mendoza · Equipo 1',
+      ]);
+      expect(fechaHoraSello(DateTime(2026, 10, 25, 0, 5)), 'Dom 25 oct 2026 · 12:05 a.m.');
+    });
+
+    testWidgets('El sello queda pegado en la foto', (tester) async {
+      final original = img.encodeJpg(img.Image(width: 400, height: 300)..clear(img.ColorRgb8(255, 255, 255)));
+      final sellada = await tester.runAsync(() => sellarFoto(original, lineas: ['Calle 60', 'Mié 28 oct'], etiqueta: 'En el domicilio'));
+      final foto = img.decodeJpg(sellada!)!;
+      expect((foto.width, foto.height), (400, 300));
+      expect(foto.getPixel(5, 5).r, greaterThan(240)); // arriba sigue blanco
+      expect(foto.getPixel(5, 295).r, lessThan(140)); // abajo, la franja oscura del sello
+    });
+
+    testWidgets('"Llegué" guarda hora y lugar, y ubica la dirección', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      await tester.runAsync(storage.init);
+      final engine = AppEngineService(storage: storage);
+      engine.saveVisitaAgenda(trabajo());
+      ubicador = UbicadorFijo(marca: marca(), domicilio: (domLat, domLng));
+      await tester.pumpWidget(ChangeNotifierProvider<AppEngineService>.value(
+        value: engine,
+        child: MaterialApp(home: Scaffold(body: BotonLlegue(trabajo: engine.visitaPorId('e1')!))),
+      ));
+
+      await tester.tap(find.text('Llegué'));
+      await tester.pumpAndSettle();
+      expect(find.text('Llegaste a las 10:42 mañana'), findsOneWidget);
+      final t = engine.visitaPorId('e1')!;
+      expect(t.llegada?.lat, domLat);
+      expect(t.domicilioUbicado, isTrue);
+    });
+
+    testWidgets('El administrador ve la evidencia y los avisos', (tester) async {
+      final t = trabajo()
+        ..domLat = domLat
+        ..domLng = domLng
+        ..domDireccion = 'Calle 60 #450 x 53 y 55, Col. Centro, Mérida'
+        ..llegada = marca()
+        ..salida = Marca(hora: DateTime(2026, 10, 28, 12, 12), lat: domLat, lng: domLng)
+        ..fotos = ['f1']
+        ..marcasFotos['f1'] = marca(lat: domLat + 0.027);
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: EvidenciaTrabajo(trabajo: t)))));
+      expect(find.text('Llegaron 10:42 mañana · Cobraron 12:12 tarde'), findsOneWidget);
+      expect(find.text('1 h 30 min en el trabajo'), findsOneWidget);
+      expect(find.text('Una foto se marcó a 3.0 km del domicilio'), findsOneWidget);
+      expect(find.text('2 de 3 marcas en el domicilio'), findsOneWidget);
+
+      t.llegada = marca(falsa: true);
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: EvidenciaTrabajo(trabajo: t, key: UniqueKey())))));
+      expect(find.text('Se usó una app para falsear la ubicación'), findsOneWidget);
+    });
   });
 }

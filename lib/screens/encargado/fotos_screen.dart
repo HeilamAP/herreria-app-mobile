@@ -2,9 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../models/marca.dart';
 import '../../models/visita_agenda.dart';
 import '../../services/app_engine_service.dart';
 import '../../services/foto_store.dart';
+import '../../services/sello_foto.dart';
+import '../../services/ubicacion.dart';
 import '../../services/storage_service.dart';
 import 'ui.dart';
 
@@ -195,6 +198,7 @@ class FotosNotaScreen extends StatefulWidget {
 class _FotosNotaScreenState extends State<FotosNotaScreen> {
   final _nota = TextEditingController();
   bool _ocupado = false;
+  bool _sellando = false; // buscando la ubicación y poniendo el sello
 
   @override
   void initState() {
@@ -224,9 +228,15 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
       return;
     }
     final storage = context.read<StorageService>();
+    final camara = origen == ImageSource.camera;
     setState(() => _ocupado = true);
+    // Las fotos de la cámara llevan sello de evidencia (hora y lugar). El permiso se pide antes
+    // de abrir la cámara, y el GPS busca la ubicación mientras la cámara está abierta.
+    // Las de la galería no: pueden ser de otro día y otro lugar.
+    if (camara) await ubicador.pedirPermiso();
+    final marcaGps = camara ? tomarMarca(engine, widget.trabajoId) : null;
     // Si Android cierra la app con la cámara abierta, la foto se rescata al volver a abrirla.
-    await storage.guardarFotoPendiente(widget.trabajoId);
+    await storage.guardarFotoPendiente(widget.trabajoId, camara: camara);
     XFile? archivo;
     try {
       // Se reduce el tamaño para que cada foto pese poco (unos 200 KB).
@@ -234,20 +244,37 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
     } catch (e) {
       debugPrint('Error al elegir foto: $e');
       if (mounted) {
-        _aviso(origen == ImageSource.camera ? 'No se pudo abrir la cámara.' : 'No se pudo abrir la galería.');
+        _aviso(camara ? 'No se pudo abrir la cámara.' : 'No se pudo abrir la galería.');
       }
     }
+    final tomada = DateTime.now();
     await storage.guardarFotoPendiente(null);
     try {
       if (archivo == null) return;
-      final id = await guardarFoto(await archivo.readAsBytes());
+      var bytes = await archivo.readAsBytes();
+      Marca? marca;
+      if (marcaGps != null) {
+        if (mounted) setState(() => _sellando = true);
+        marca = (await marcaGps).conHora(tomada);
+        final t = engine.visitaPorId(widget.trabajoId);
+        if (t != null) bytes = await sellarFotoDeTrabajo(bytes, t, marca);
+      }
+      final id = await guardarFoto(bytes);
       final actual = engine.visitaPorId(widget.trabajoId);
-      if (actual != null) engine.actualizarNotaYFotos(actual.id, fotos: [...actual.fotos, id]);
+      if (actual != null) {
+        engine.actualizarNotaYFotos(actual.id, fotos: [...actual.fotos, id]);
+        if (marca != null) engine.marcarFoto(actual.id, id, marca);
+      }
     } catch (e) {
       debugPrint('Error al guardar foto: $e');
       if (mounted) _aviso('No se pudo guardar la foto. Intente de nuevo.');
     } finally {
-      if (mounted) setState(() => _ocupado = false);
+      if (mounted) {
+        setState(() {
+          _ocupado = false;
+          _sellando = false;
+        });
+      }
     }
   }
 
@@ -355,7 +382,16 @@ class _FotosNotaScreenState extends State<FotosNotaScreen> {
                     Text('${v.fotos.length} de ${VisitaAgenda.maxFotos} fotos', style: TextStyle(fontSize: 15, color: EC.textoSuave)),
                     const SizedBox(height: 10),
                     if (_ocupado)
-                      const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()))
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(children: [
+                          const CircularProgressIndicator(),
+                          if (_sellando) ...[
+                            const SizedBox(height: 10),
+                            Text('Poniendo hora y lugar a la foto…', style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+                          ],
+                        ]),
+                      )
                     else
                       Row(children: [
                         Expanded(

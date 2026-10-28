@@ -6,6 +6,7 @@ import '../../services/app_engine_service.dart';
 import '../../services/auth_service.dart';
 import 'agendar_screen.dart';
 import 'cobrar_screen.dart';
+import 'evidencia.dart';
 import 'fotos_screen.dart';
 import 'horario_dia.dart';
 import 'ui.dart';
@@ -236,6 +237,7 @@ class _TrabajosDiaScreenState extends State<TrabajosDiaScreen> {
         trabajo: t,
         mostrarEquipo: true,
         equipoPropio: _equipoPropio,
+        mostrarEvidencia: widget.admin,
         onCobrar: () {
           antes?.call();
           Navigator.of(context).push(MaterialPageRoute(builder: (_) => CobrarScreen(equipoId: t.equipoId, trabajo: t)));
@@ -328,6 +330,7 @@ class _TarjetaTrabajo extends StatelessWidget {
   final VoidCallback onCobrar;
   final VoidCallback onOpciones;
   final VoidCallback onFotos;
+  final bool mostrarEvidencia; // solo el administrador
 
   const _TarjetaTrabajo({
     required this.trabajo,
@@ -336,6 +339,7 @@ class _TarjetaTrabajo extends StatelessWidget {
     required this.onCobrar,
     required this.onOpciones,
     required this.onFotos,
+    this.mostrarEvidencia = false,
   });
 
   /// Etiqueta con el equipo que hace el trabajo; resalta el equipo del encargado.
@@ -414,6 +418,7 @@ class _TarjetaTrabajo extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             BotonGrande(texto: 'Cambiar o borrar', icono: Icons.edit_outlined, fontSize: 17, alto: 50, onTap: onOpciones),
+            if (mostrarEvidencia) ...[const SizedBox(height: 10), EvidenciaTrabajo(trabajo: t)],
           ],
         ),
       );
@@ -516,6 +521,8 @@ class _TarjetaTrabajo extends StatelessWidget {
           ),
           if (puedeCobrar) ...[
             const SizedBox(height: 10),
+            BotonLlegue(trabajo: t),
+            const SizedBox(height: 10),
             BotonGrande(
               texto: t.esVenta ? 'Ya vendí y cobré' : 'Terminé y cobré',
               icono: Icons.check,
@@ -527,6 +534,7 @@ class _TarjetaTrabajo extends StatelessWidget {
             const SizedBox(height: 10),
             NotasYFotosResumen(trabajo: t, onAbrir: onFotos),
           ],
+          if (mostrarEvidencia) ...[const SizedBox(height: 10), EvidenciaTrabajo(trabajo: t)],
           const SizedBox(height: 10),
           Row(children: [
             Expanded(

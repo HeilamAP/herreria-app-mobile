@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'direccion.dart';
+import 'marca.dart';
 
 class VisitaAgenda {
   final String id;
@@ -19,6 +20,15 @@ class VisitaAgenda {
   int duracionMin; // Cuánto tarda el trabajo, en minutos (para la vista de horario)
   String notaFinal; // Lo que se anota al terminar (aparte de las notas de cuando se agenda)
   List<String> fotos; // Ids de las fotos guardadas en el teléfono (ver FotoStore)
+  // Evidencia (ver Marca): cuándo y dónde llegaron, cobraron y tomaron cada foto.
+  Marca? llegada;
+  Marca? salida; // al cobrar
+  Map<String, Marca> marcasFotos; // id de foto → marca (solo fotos de la cámara)
+  // Dónde queda la dirección en el mapa, para comparar con las marcas. Se calcula una vez
+  // por dirección (domDireccion es la dirección con la que se calculó).
+  double? domLat;
+  double? domLng;
+  String domDireccion;
 
   VisitaAgenda({
     required this.id,
@@ -38,7 +48,14 @@ class VisitaAgenda {
     this.notaFinal = '',
     List<String>? fotos,
     this.partes,
-  }) : fotos = fotos ?? [];
+    this.llegada,
+    this.salida,
+    Map<String, Marca>? marcasFotos,
+    this.domLat,
+    this.domLng,
+    this.domDireccion = '',
+  })  : fotos = fotos ?? [],
+        marcasFotos = marcasFotos ?? {};
 
   static const maxFotos = 10;
 
@@ -52,6 +69,9 @@ class VisitaAgenda {
   bool get esVenta => tipo.toLowerCase() == 'venta';
 
   String get referencias => partes?.referencias.trim() ?? '';
+
+  /// La dirección actual ya está ubicada en el mapa.
+  bool get domicilioUbicado => domLat != null && domLng != null && domDireccion == direccion;
 
   /// Minutos desde medianoche, para ordenar y para el selector de hora.
   int get minutosDelDia => minutosDeHora(hora);
@@ -91,6 +111,17 @@ class VisitaAgenda {
       notaFinal: json['notaFinal'] ?? '',
       fotos: (json['fotos'] as List?)?.map((e) => e.toString()).toList(),
       partes: json['partes'] is Map ? PartesDireccion.fromJson(Map<String, dynamic>.from(json['partes'])) : null,
+      llegada: json['llegada'] is Map ? Marca.fromJson(Map<String, dynamic>.from(json['llegada'])) : null,
+      salida: json['salida'] is Map ? Marca.fromJson(Map<String, dynamic>.from(json['salida'])) : null,
+      marcasFotos: json['marcasFotos'] is Map
+          ? {
+              for (final e in (json['marcasFotos'] as Map).entries)
+                if (e.value is Map) e.key.toString(): Marca.fromJson(Map<String, dynamic>.from(e.value)),
+            }
+          : null,
+      domLat: (json['domLat'] as num?)?.toDouble(),
+      domLng: (json['domLng'] as num?)?.toDouble(),
+      domDireccion: json['domDireccion'] ?? '',
     );
   }
 
@@ -112,5 +143,11 @@ class VisitaAgenda {
         'notaFinal': notaFinal,
         'fotos': fotos,
         if (partes != null) 'partes': partes!.toJson(),
+        if (llegada != null) 'llegada': llegada!.toJson(),
+        if (salida != null) 'salida': salida!.toJson(),
+        if (marcasFotos.isNotEmpty) 'marcasFotos': {for (final e in marcasFotos.entries) e.key: e.value.toJson()},
+        if (domLat != null) 'domLat': domLat,
+        if (domLng != null) 'domLng': domLng,
+        if (domDireccion.isNotEmpty) 'domDireccion': domDireccion,
       };
 }
