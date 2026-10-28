@@ -470,8 +470,10 @@ class _TarjetaTrabajo extends StatelessWidget {
             Icon(Icons.place_outlined, size: 20, color: EC.textoSuave),
             const SizedBox(width: 4),
             Expanded(
-              child: Text(t.direccion.isEmpty ? 'Sin dirección' : t.direccion,
-                  style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(t.direccion.isEmpty ? 'Sin dirección' : t.direccion, style: TextStyle(fontSize: 17, color: EC.textoSuave)),
+                if (t.referencias.isNotEmpty) Text(t.referencias, style: TextStyle(fontSize: 16, color: EC.textoTenue)),
+              ]),
             ),
           ]),
           if (t.montoEstimado > 0) ...[

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/direccion.dart';
 import '../../models/visita_agenda.dart';
 import '../../services/app_engine_service.dart';
 import 'ui.dart';
 
 /// Agendar (o cambiar) un trabajo en pasos, una pregunta por pantalla:
-/// cliente → tipo → dirección → cobro aproximado → día → hora → minutos → cuánto tarda → confirmar.
+/// cliente → tipo → dirección → notas → cobro aproximado → día → hora → minutos → cuánto tarda → confirmar.
 /// Si se llega desde un hueco del horario ([minutoInicial] dado), el día y la hora ya vienen elegidos.
 class AgendarScreen extends StatefulWidget {
   final String equipoId;
@@ -35,12 +36,22 @@ class AgendarScreen extends StatefulWidget {
   State<AgendarScreen> createState() => _AgendarScreenState();
 }
 
-enum _Paso { cliente, tipo, lugar, estimado, dia, hora, minutos, duracion, confirmar }
+enum _Paso { cliente, tipo, lugar, notas, estimado, dia, hora, minutos, duracion, confirmar }
 
 class _AgendarScreenState extends State<AgendarScreen> {
   final _cliente = TextEditingController();
   final _telefono = TextEditingController();
-  final _direccion = TextEditingController();
+  // Dirección por partes (ver PartesDireccion).
+  final _calle = TextEditingController();
+  final _numero = TextEditingController();
+  final _cruce1 = TextEditingController();
+  final _cruce2 = TextEditingController();
+  final _colonia = TextEditingController();
+  final _municipio = TextEditingController(); // solo si no es Mérida
+  final _referencias = TextEditingController();
+  bool _enMerida = true;
+  /// Trabajo de antes del formulario: no se elige municipio hasta que lo toquen (su dirección vieja ya puede traerlo).
+  bool _municipioSinElegir = false;
   final _notas = TextEditingController();
   late _Paso _paso;
   String _tipo = '';
@@ -67,6 +78,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
           _Paso.cliente,
           _Paso.tipo,
           _Paso.lugar,
+          _Paso.notas,
           _Paso.estimado,
           if (!_horaYaElegida) ...[_Paso.dia, _Paso.hora, _Paso.minutos],
           _Paso.duracion,
@@ -92,7 +104,21 @@ class _AgendarScreenState extends State<AgendarScreen> {
       final digitos = e.telefono.replaceAll(RegExp(r'[^0-9]'), '');
       _telefono.text = formatoTelefono(
           digitos.length > digitosTelefono ? digitos.substring(digitos.length - digitosTelefono) : digitos);
-      _direccion.text = e.direccion;
+      final p = e.partes;
+      if (p != null) {
+        _calle.text = p.calle;
+        _numero.text = p.numero;
+        _cruce1.text = p.cruce1;
+        _cruce2.text = p.cruce2;
+        _colonia.text = p.colonia;
+        _referencias.text = p.referencias;
+        _enMerida = p.municipio == PartesDireccion.municipioPredeterminado;
+        if (!_enMerida) _municipio.text = p.municipio;
+      } else {
+        // Trabajo de antes del formulario: su dirección completa queda en "Calle" para no perderla.
+        _calle.text = e.direccion;
+        _municipioSinElegir = true;
+      }
       _notas.text = e.notas;
       _tipo = e.tipo;
       _estimado = e.montoEstimado > 0 ? e.montoEstimado.round().toString() : '';
@@ -109,7 +135,9 @@ class _AgendarScreenState extends State<AgendarScreen> {
   void dispose() {
     _cliente.dispose();
     _telefono.dispose();
-    _direccion.dispose();
+    for (final c in [_calle, _numero, _cruce1, _cruce2, _colonia, _municipio, _referencias]) {
+      c.dispose();
+    }
     _notas.dispose();
     super.dispose();
   }
@@ -176,8 +204,23 @@ class _AgendarScreenState extends State<AgendarScreen> {
     return 'Paso $n de ${numerados.length}';
   }
 
+  PartesDireccion get _partes => PartesDireccion(
+        calle: _calle.text.trim(),
+        numero: _numero.text.trim(),
+        cruce1: _cruce1.text.trim(),
+        cruce2: _cruce2.text.trim(),
+        colonia: _colonia.text.trim(),
+        municipio: _municipioSinElegir
+            ? ''
+            : _enMerida
+                ? PartesDireccion.municipioPredeterminado
+                : _municipio.text.trim(),
+        referencias: _referencias.text.trim(),
+      );
+
   void _guardar() {
     final engine = context.read<AppEngineService>();
+    final partes = _partes;
     final v = widget.existente?.copia() ??
         VisitaAgenda(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -192,7 +235,8 @@ class _AgendarScreenState extends State<AgendarScreen> {
     v
       ..cliente = _cliente.text.trim()
       ..telefono = _telefono.text.trim()
-      ..direccion = _direccion.text.trim()
+      ..direccion = partes.linea
+      ..partes = partes
       ..notas = _notas.text.trim()
       ..tipo = _tipo
       ..montoEstimado = double.tryParse(_estimado) ?? 0
@@ -236,6 +280,7 @@ class _AgendarScreenState extends State<AgendarScreen> {
                 _Paso.cliente => _pasoCliente(),
                 _Paso.tipo => _pasoTipo(),
                 _Paso.lugar => _pasoLugar(),
+                _Paso.notas => _pasoNotas(),
                 _Paso.estimado => _pasoEstimado(),
                 _Paso.dia => _pasoDia(),
                 _Paso.hora => _pasoHora(),
@@ -322,22 +367,125 @@ class _AgendarScreenState extends State<AgendarScreen> {
         ),
       ];
 
-  List<Widget> _pasoLugar() {
+  /// Caja de texto chica (número, cruzamientos), con el mismo estilo que [CampoGrande].
+  Widget _campoCorto(TextEditingController c, String ejemplo) => TextField(
+        controller: c,
+        style: TextStyle(fontSize: 21, color: EC.texto),
+        decoration: InputDecoration(hintText: ejemplo),
+      );
+
+  Widget _etiqueta(String texto, {String? opcional}) => Padding(
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
+        child: Text.rich(TextSpan(children: [
+          TextSpan(text: texto, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: EC.texto)),
+          if (opcional != null) TextSpan(text: '  $opcional', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+        ])),
+      );
+
+  List<Widget> _pasoLugar() => [
+        Encabezado(titulo: '¿Dónde es?', paso: _textoPaso(_Paso.lugar), onAtras: _atras),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _etiqueta('Calle'),
+              TextField(
+                controller: _calle,
+                style: TextStyle(fontSize: 21, color: EC.texto),
+                decoration: const InputDecoration(hintText: '60'),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+              ),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _etiqueta('Número'),
+              _campoCorto(_numero, '450'),
+            ]),
+          ),
+        ]),
+        TextoError(_error),
+        _etiqueta('Cruzamientos', opcional: '(entre qué calles)'),
+        Row(children: [
+          Expanded(child: _campoCorto(_cruce1, '53')),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text('y', style: TextStyle(fontSize: 20, color: EC.textoSuave)),
+          ),
+          Expanded(child: _campoCorto(_cruce2, '55')),
+        ]),
+        _etiqueta('Colonia'),
+        _campoCorto(_colonia, 'Centro'),
+        _etiqueta('Municipio'),
+        Row(children: [
+          Expanded(
+            child: BotonGrande(
+              texto: PartesDireccion.municipioPredeterminado,
+              alto: 56,
+              fontSize: 19,
+              seleccionado: !_municipioSinElegir && _enMerida,
+              onTap: () => setState(() {
+                _enMerida = true;
+                _municipioSinElegir = false;
+              }),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: BotonGrande(
+              texto: 'Otro',
+              alto: 56,
+              fontSize: 19,
+              seleccionado: !_municipioSinElegir && !_enMerida,
+              onTap: () => setState(() {
+                _enMerida = false;
+                _municipioSinElegir = false;
+              }),
+            ),
+          ),
+        ]),
+        if (!_municipioSinElegir && !_enMerida) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _municipio,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(fontSize: 21, color: EC.texto),
+            decoration: const InputDecoration(hintText: 'Kanasín'),
+          ),
+        ],
+        _etiqueta('Referencias', opcional: '(opcional)'),
+        _campoCorto(_referencias, 'Portón negro, frente a la tienda'),
+        const SizedBox(height: 6),
+        Text('Con la dirección, el botón "Cómo llegar" abre el mapa.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
+        _siguiente(() {
+          if (_calle.text.trim().isEmpty) {
+            setState(() => _error = 'Escribe la calle');
+            return;
+          }
+          _avanzar();
+        }),
+      ];
+
+  List<Widget> _pasoNotas() {
     final esVenta = _tipo.toLowerCase() == 'venta';
     return [
-      Encabezado(titulo: '¿Dónde es?', paso: _textoPaso(_Paso.lugar), onAtras: _atras),
+      Encabezado(
+        titulo: esVenta ? '¿Qué vas a vender?' : '¿Algo que anotar?',
+        paso: _textoPaso(_Paso.notas),
+        onAtras: _atras,
+      ),
       const SizedBox(height: 16),
-      CampoGrande(etiqueta: 'Dirección', controller: _direccion, ejemplo: 'Calle 21 #300 x 20 y 22'),
-      const SizedBox(height: 6),
-      Text('Con la dirección, el botón "Cómo llegar" abre el mapa.', style: TextStyle(fontSize: 16, color: EC.textoSuave)),
-      const SizedBox(height: 18),
       CampoGrande(
-        etiqueta: esVenta ? '¿Qué vas a vender?' : 'Notas',
+        etiqueta: esVenta ? 'Lo que vas a vender' : 'Notas',
         opcional: '(opcional)',
         controller: _notas,
         ejemplo: esVenta ? '2 controles remotos' : 'Llevar soldadora',
+        onChanged: (_) => setState(() {}), // cambia el texto del botón
       ),
-      _siguiente(_avanzar),
+      _siguiente(_avanzar, texto: _notas.text.trim().isEmpty ? 'Seguir sin notas' : 'Siguiente'),
     ];
   }
 
@@ -610,9 +758,15 @@ class _AgendarScreenState extends State<AgendarScreen> {
             separador,
             dato(
               Icons.place_outlined,
-              _direccion.text.trim().isEmpty ? 'Sin dirección' : _direccion.text.trim(),
+              _partes.linea.isEmpty ? 'Sin dirección' : _partes.linea,
               _Paso.lugar,
-              detalle: _notas.text.trim(),
+              detalle: _referencias.text.trim(),
+            ),
+            separador,
+            dato(
+              Icons.sticky_note_2_outlined,
+              _notas.text.trim().isEmpty ? 'Sin notas' : _notas.text.trim(),
+              _Paso.notas,
             ),
             separador,
             dato(Icons.payments_outlined, estimado > 0 ? 'Cobrar aprox. ${dinero(estimado)}' : 'Cobro por definir', _Paso.estimado),

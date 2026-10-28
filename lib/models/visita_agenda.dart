@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'direccion.dart';
 
 class VisitaAgenda {
   final String id;
@@ -6,7 +7,8 @@ class VisitaAgenda {
   String fecha; // yyyy-MM-dd
   String hora; // "HH:mm" (24 h). Se aceptan datos viejos tipo "09:00 AM".
   String tipo; // Instalación | Mantenimiento | Reparación | Medir y cotizar | Soldadura | Venta | Otro
-  String direccion;
+  String direccion; // La dirección en una línea (lo que se muestra y se busca en el mapa)
+  PartesDireccion? partes; // La misma dirección por partes (null en trabajos de antes del formulario)
   String telefono;
   String notas;
   String estado; // pendiente | completado | cancelado
@@ -35,6 +37,7 @@ class VisitaAgenda {
     this.duracionMin = 60,
     this.notaFinal = '',
     List<String>? fotos,
+    this.partes,
   }) : fotos = fotos ?? [];
 
   static const maxFotos = 10;
@@ -47,6 +50,8 @@ class VisitaAgenda {
   }
 
   bool get esVenta => tipo.toLowerCase() == 'venta';
+
+  String get referencias => partes?.referencias.trim() ?? '';
 
   /// Minutos desde medianoche, para ordenar y para el selector de hora.
   int get minutosDelDia => minutosDeHora(hora);
@@ -85,6 +90,7 @@ class VisitaAgenda {
       duracionMin: (json['duracionMin'] as num?)?.toInt() ?? 60,
       notaFinal: json['notaFinal'] ?? '',
       fotos: (json['fotos'] as List?)?.map((e) => e.toString()).toList(),
+      partes: json['partes'] is Map ? PartesDireccion.fromJson(Map<String, dynamic>.from(json['partes'])) : null,
     );
   }
 
@@ -105,5 +111,6 @@ class VisitaAgenda {
         'duracionMin': duracionMin,
         'notaFinal': notaFinal,
         'fotos': fotos,
+        if (partes != null) 'partes': partes!.toJson(),
       };
 }

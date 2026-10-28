@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:portones_movil/models/gasto.dart';
+import 'package:portones_movil/models/direccion.dart';
 import 'package:portones_movil/screens/encargado/agendar_screen.dart';
 import 'package:portones_movil/screens/encargado/cobrar_screen.dart';
 import 'package:portones_movil/screens/encargado/gastos_screen.dart';
@@ -292,6 +293,45 @@ void main() {
       expect(find.text('Me equivoqué, corregir'), findsOneWidget);
       expect(engine.data.agenda.where((a) => a.id == 't1').single.cliente, 'Luis Cauich');
       expect(engine.data.agenda.length, total); // no se creó otro
+    });
+
+    testWidgets('Dirección: se corrige por partes y la línea se vuelve a armar', (tester) async {
+      await abrir(tester, const SizedBox());
+      final t = VisitaAgenda(
+        id: 't2', cliente: 'Carlos Mendoza', fecha: fechaKey(hoy()), hora: '09:00', tipo: 'Instalación',
+        direccion: '', telefono: '', notas: 'Llevar soldadora', estado: 'pendiente', equipoId: 'equipo1',
+        partes: PartesDireccion(calle: '60', numero: '450', cruce1: '53', cruce2: '55', colonia: 'Centro', referencias: 'Portón negro'),
+      )..direccion = 'Calle 60 #450 x 53 y 55, Col. Centro, Mérida';
+      engine.saveVisitaAgenda(t);
+      await mostrar(tester, AgendarScreen(equipoId: 'equipo1', existente: t, empezarEnConfirmar: true));
+
+      expect(find.text('Calle 60 #450 x 53 y 55, Col. Centro, Mérida'), findsOneWidget);
+      expect(find.text('Portón negro'), findsOneWidget);
+      expect(find.text('Llevar soldadora'), findsOneWidget); // las notas tienen su propio renglón
+
+      await tester.tap(find.text('Calle 60 #450 x 53 y 55, Col. Centro, Mérida'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Dónde es?'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Centro'), 'García Ginerés');
+      await tester.tap(find.text('Otro'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Kanasín'), 'Kanasín');
+      await tester.enterText(find.widgetWithText(TextField, '60'), '');
+      await tester.ensureVisible(find.text('Siguiente'));
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escribe la calle'), findsOneWidget); // la calle es obligatoria
+      await tester.enterText(find.byType(TextField).first, '60');
+      await tester.ensureVisible(find.text('Siguiente'));
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Está bien así?'), findsOneWidget);
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+      final guardado = engine.data.agenda.firstWhere((a) => a.id == 't2');
+      expect(guardado.direccion, 'Calle 60 #450 x 53 y 55, Col. García Ginerés, Kanasín');
+      expect(guardado.referencias, 'Portón negro');
     });
 
     testWidgets('Venta rápida: se reabre con cliente, monto y forma de pago', (tester) async {
@@ -610,6 +650,21 @@ void main() {
     expect(VisitaAgenda.minutosDeHora('02:30 PM'), 14 * 60 + 30);
     expect(VisitaAgenda.minutosDeHora('12:15 AM'), 15);
     expect(VisitaAgenda.horaDeMinutos(16 * 60 + 15), '16:15');
+  });
+
+  test('La dirección por partes se arma en una línea', () {
+    expect(PartesDireccion(calle: '60', numero: '450', cruce1: '53', cruce2: '55', colonia: 'Centro').linea,
+        'Calle 60 #450 x 53 y 55, Col. Centro, Mérida');
+    expect(PartesDireccion(calle: '21').linea, 'Calle 21, Mérida');
+    expect(PartesDireccion(calle: 'Av. Itzaes', numero: '12', colonia: 'Col. Jardines', municipio: 'Umán').linea,
+        'Av. Itzaes #12, Col. Jardines, Umán');
+    expect(PartesDireccion(calle: '20', cruce2: '22').linea, 'Calle 20 x 22, Mérida');
+    final copia = VisitaAgenda.fromJson(VisitaAgenda(
+      id: 'x', cliente: 'A', fecha: '2030-01-01', tipo: 'Otro', direccion: '', telefono: '', notas: '', estado: 'pendiente',
+      partes: PartesDireccion(calle: '60', referencias: 'Portón negro'),
+    ).toJson());
+    expect(copia.partes?.calle, '60');
+    expect(copia.referencias, 'Portón negro');
   });
 
   test('El teléfono solo acepta 10 números y se separa al escribir', () {
